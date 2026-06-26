@@ -1,0 +1,284 @@
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  TrendingUp,
+  Users,
+  DollarSign,
+  ArrowUpRight,
+  ExternalLink,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+import { api, CustomerRow, FeatureRow } from "@/lib/api";
+import { MarginBadge } from "@/components/MarginBadge";
+import { formatCurrency, formatNumber } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+
+export default function Dashboard() {
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+
+  const { data: projects = [] } = useQuery({
+    queryKey: ["projects"],
+    queryFn: api.projects.list,
+  });
+
+  const pid = projectId ?? projects[0]?.id;
+
+  const { data: summary, isLoading: summaryLoading } = useQuery({
+    queryKey: ["summary", pid],
+    queryFn: () => api.summary(pid!),
+    enabled: !!pid,
+  });
+
+  const { data: customers = [], isLoading: customersLoading } = useQuery({
+    queryKey: ["customers", pid],
+    queryFn: () => api.customers.list(pid!),
+    enabled: !!pid,
+  });
+
+  const { data: features = [], isLoading: featuresLoading } = useQuery({
+    queryKey: ["features", pid],
+    queryFn: () => api.features(pid!),
+    enabled: !!pid,
+  });
+
+  if (!pid) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <p className="text-muted-foreground">No projects yet.</p>
+        <Link
+          to="/onboarding"
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium"
+        >
+          Create your first project
+        </Link>
+      </div>
+    );
+  }
+
+  const pctChange = summary?.pct_change_vs_last_month;
+  const pctChangeLabel =
+    pctChange != null
+      ? `${pctChange > 0 ? "+" : ""}${pctChange.toFixed(0)}% vs last mo`
+      : null;
+
+  return (
+    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      {/* Summary bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard
+          label="LLM Cost MTD"
+          value={summary ? formatCurrency(summary.total_cost_mtd) : "—"}
+          sub={summary ? `On track for ${formatCurrency(summary.projected_month_end)}` : ""}
+          loading={summaryLoading}
+          icon={<DollarSign className="h-4 w-4" />}
+        />
+        <StatCard
+          label="MoM Change"
+          value={pctChangeLabel ?? "—"}
+          sub={pctChange != null && pctChange > 20 ? "Growing fast" : ""}
+          loading={summaryLoading}
+          icon={<TrendingUp className="h-4 w-4" />}
+          highlight={pctChange != null && pctChange > 30}
+        />
+        <StatCard
+          label="Paying Customers"
+          value={summary ? formatNumber(summary.total_customers) : "—"}
+          sub=""
+          loading={summaryLoading}
+          icon={<Users className="h-4 w-4" />}
+        />
+        <StatCard
+          label="At-Risk Customers"
+          value={summary ? String(summary.customers_at_risk) : "—"}
+          sub={summary?.customers_at_risk ? "Margin < 40%" : "All healthy"}
+          loading={summaryLoading}
+          icon={<AlertTriangle className="h-4 w-4" />}
+          highlight={!!summary?.customers_at_risk}
+        />
+      </div>
+
+      {/* Customers + Features */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Customer table — 3 cols */}
+        <div className="lg:col-span-3 border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
+            <h2 className="font-semibold text-sm">Customers</h2>
+            <span className="text-xs text-muted-foreground">{customers.length} total</span>
+          </div>
+          {customersLoading ? (
+            <LoadingRows n={5} />
+          ) : customers.length === 0 ? (
+            <EmptyState message="No customer data yet. Send your first event with the SDK." />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Customer</th>
+                    <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Plan</th>
+                    <th className="text-right px-4 py-2 text-xs font-medium text-muted-foreground">MRR</th>
+                    <th className="text-right px-4 py-2 text-xs font-medium text-muted-foreground">Cost (30d)</th>
+                    <th className="text-right px-4 py-2 text-xs font-medium text-muted-foreground">Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.map((c) => (
+                    <CustomerTableRow key={c.customer_id} customer={c} projectId={pid} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Feature table — 2 cols */}
+        <div className="lg:col-span-2 border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
+            <h2 className="font-semibold text-sm">Features</h2>
+            <Link
+              to={`/dashboard/${pid}/pricing`}
+              className="text-xs text-primary flex items-center gap-1 hover:underline"
+            >
+              Pricing calc
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          </div>
+          {featuresLoading ? (
+            <LoadingRows n={4} />
+          ) : features.length === 0 ? (
+            <EmptyState message="No feature data yet." />
+          ) : (
+            <div className="divide-y">
+              {features.map((f) => (
+                <FeatureTableRow key={f.feature} feature={f} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Trend chart */}
+      <TrendChart projectId={pid} />
+    </div>
+  );
+}
+
+function CustomerTableRow({ customer: c, projectId }: { customer: CustomerRow; projectId: string }) {
+  const navigate = useNavigate();
+  return (
+    <tr
+      className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
+      onClick={() => navigate(`/dashboard/${projectId}/customers/${c.customer_id}`)}
+    >
+      <td className="px-4 py-3 font-mono text-xs text-foreground">
+        {c.customer_id.length > 20 ? c.customer_id.slice(0, 18) + "…" : c.customer_id}
+      </td>
+      <td className="px-4 py-3 text-xs text-muted-foreground">{c.plan ?? "—"}</td>
+      <td className="px-4 py-3 text-right text-xs">
+        {c.mrr != null ? formatCurrency(c.mrr) : <span className="text-muted-foreground">—</span>}
+      </td>
+      <td className="px-4 py-3 text-right text-xs font-mono">{formatCurrency(c.total_cost)}</td>
+      <td className="px-4 py-3 text-right">
+        {c.margin != null ? (
+          <MarginBadge margin={c.margin} status={c.alert_status} />
+        ) : (
+          <span className="text-xs text-muted-foreground">No Stripe</span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function FeatureTableRow({ feature: f }: { feature: FeatureRow }) {
+  return (
+    <div className="px-4 py-3 flex items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-mono truncate">{f.feature}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {formatNumber(f.call_count)} calls · avg {formatCurrency(f.avg_cost_per_call)}
+        </p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-semibold">{formatCurrency(f.total_cost)}</p>
+        <p className="text-xs text-muted-foreground">{f.pct_of_bill}% of bill</p>
+      </div>
+      {f.pct_of_bill > 40 && (
+        <ArrowUpRight className="h-4 w-4 text-orange-500 shrink-0" />
+      )}
+    </div>
+  );
+}
+
+function TrendChart({ projectId }: { projectId: string }) {
+  // Derive daily trend from customers endpoint with daily granularity
+  // For now show a placeholder using summary data
+  return (
+    <div className="border rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
+        <h2 className="font-semibold text-sm">Monthly Trend</h2>
+      </div>
+      <div className="p-4 h-48 flex items-center justify-center text-muted-foreground text-sm">
+        <p>Connect the SDK to populate the trend chart.</p>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  sub,
+  loading,
+  icon,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  loading: boolean;
+  icon: React.ReactNode;
+  highlight?: boolean;
+}) {
+  return (
+    <div className={`border rounded-xl px-4 py-3 ${highlight ? "border-destructive/50 bg-destructive/5" : "bg-card"}`}>
+      <div className="flex items-center gap-2 text-muted-foreground mb-1">
+        {icon}
+        <span className="text-xs">{label}</span>
+      </div>
+      {loading ? (
+        <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+      ) : (
+        <p className="text-xl font-bold">{value}</p>
+      )}
+      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function LoadingRows({ n }: { n: number }) {
+  return (
+    <div className="p-4 space-y-3">
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="h-8 bg-muted rounded animate-pulse" />
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex items-center justify-center py-12 px-4 text-sm text-muted-foreground text-center">
+      {message}
+    </div>
+  );
+}

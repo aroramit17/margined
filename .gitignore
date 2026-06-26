@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.env
+*.env
+
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# Vite
+frontend/dist/
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+
+# Editor
+.idea/
+.vscode/
+*.swp

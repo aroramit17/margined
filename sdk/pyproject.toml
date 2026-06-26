@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "margined"
+version = "0.1.0"
+description = "Know which AI features are profitable. Know which customers are costing you money."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["llm", "cost", "tracking", "anthropic", "openai", "unit-economics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "httpx>=0.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio",
+    "anthropic",
+    "openai",
+]
+
+[project.urls]
+Homepage = "https://trymargined.com"
+Documentation = "https://docs.trymargined.com"
+Repository = "https://github.com/trymargined/margined-python"
+
+[tool.hatch.build.targets.wheel]
+packages = ["margined"]
