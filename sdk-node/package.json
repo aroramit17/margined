@@ -34,7 +34,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/pushkalkumar/margined",
+    "url": "git+https://github.com/pushkalkumar/margined.git",
     "directory": "sdk-node"
   },
   "devDependencies": {
