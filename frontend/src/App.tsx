@@ -17,9 +17,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, isDemo } = useAuth();
   if (loading) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading…</div>;
-  return user ? <Navigate to="/dashboard" replace /> : <Landing />;
+  // Demo deployments keep the landing page reachable; real sessions skip it.
+  return user && !isDemo ? <Navigate to="/dashboard" replace /> : <Landing />;
 }
 
 export default function App() {

@@ -34,7 +34,7 @@ export type Project = {
   created_at: string;
 };
 
-export const api = {
+const realApi = {
   projects: {
     list: () => apiFetch<Project[]>("/projects"),
     create: (name: string) =>
@@ -125,6 +125,58 @@ export const api = {
       }),
   },
 };
+
+// ── Demo mode ──────────────────────────────────────────────
+// When no backend is configured (public deployment), the whole dashboard
+// runs on a deterministic seeded dataset — same shapes, no network.
+
+function buildDemoApi(): typeof realApi {
+  // Lazy import keeps the demo dataset out of the bundle's hot path
+  const demo = () => import("./demo");
+  return {
+    projects: {
+      list: () => demo().then((d) => d.demoResponse([d.demoProject])),
+      create: () => demo().then((d) => d.demoResponse(d.demoProject)),
+      get: () => demo().then((d) => d.demoResponse(d.demoProject)),
+      rotateKey: () => demo().then((d) => d.demoResponse(d.demoProject)),
+      delete: () => Promise.resolve(undefined),
+    },
+    summary: () => demo().then((d) => d.demoResponse(d.demoSummary)),
+    trend: (_projectId: string, days = 30) =>
+      demo().then((d) => d.demoResponse(d.demoTrend(days))),
+    customers: {
+      list: () => demo().then((d) => d.demoResponse(d.demoCustomers)),
+      get: (_projectId: string, customerId: string) =>
+        demo().then((d) => d.demoResponse(d.demoCustomerDetail(customerId))),
+    },
+    features: () => demo().then((d) => d.demoResponse(d.demoFeatures)),
+    calculator: (_projectId: string, targetMargin = 0.7) =>
+      demo().then((d) => d.demoResponse(d.demoCalculator(targetMargin))),
+    alerts: {
+      list: () => demo().then((d) => d.demoResponse(d.demoAlerts)),
+      create: (_projectId: string, body: CreateAlertBody) =>
+        demo().then((d) =>
+          d.demoResponse({ ...d.demoAlerts[0], ...body, id: `demo-${Date.now()}` }),
+        ),
+      delete: () => Promise.resolve(undefined),
+      toggle: (_projectId: string, _alertId: string, enabled: boolean) =>
+        demo().then((d) => d.demoResponse({ ...d.demoAlerts[0], enabled })),
+    },
+    stripe: {
+      listCustomers: () => demo().then((d) => d.demoResponse(d.demoStripeCustomers)),
+      mapCustomer: (_projectId: string, body: { customer_id: string; stripe_customer: string }) =>
+        demo().then((d) =>
+          d.demoResponse({ ...body, current_mrr_usd: 99, plan_name: "Growth" }),
+        ),
+      refresh: () => Promise.resolve({ refreshed: 0 }),
+    },
+  };
+}
+
+const DEMO_ACTIVE =
+  import.meta.env.VITE_DEMO_MODE === "1" || !import.meta.env.VITE_SUPABASE_URL;
+
+export const api = DEMO_ACTIVE ? buildDemoApi() : realApi;
 
 // ── Types ──────────────────────────────────────────────────
 export type CustomerRow = {

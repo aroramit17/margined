@@ -7,7 +7,15 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        display: ['"Newsreader"', "Georgia", "serif"],
+        sans: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
+        mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
+      },
       colors: {
+        profit: "hsl(var(--profit))",
+        loss: "hsl(var(--loss))",
+        watch: "hsl(var(--watch))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

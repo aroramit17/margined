@@ -5,7 +5,7 @@ export type Theme = "dark" | "light";
 export function getTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "light" || stored === "dark") return stored;
-  return "dark"; // dark-first
+  return "light"; // the ledger is paper-first
 }
 
 export function applyTheme(theme: Theme) {

@@ -6,7 +6,6 @@ import {
   TrendingUp,
   Users,
   DollarSign,
-  ArrowUpRight,
   ExternalLink,
 } from "lucide-react";
 import {
@@ -68,9 +67,7 @@ export default function Dashboard() {
 
   const pctChange = summary?.pct_change_vs_last_month;
   const pctChangeLabel =
-    pctChange != null
-      ? `${pctChange > 0 ? "+" : ""}${pctChange.toFixed(0)}% vs last mo`
-      : null;
+    pctChange != null ? `${pctChange > 0 ? "+" : ""}${pctChange.toFixed(1)}%` : null;
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
@@ -84,12 +81,13 @@ export default function Dashboard() {
           icon={<DollarSign className="h-4 w-4" />}
         />
         <StatCard
-          label="MoM Change"
+          label="Cost vs last month"
           value={pctChangeLabel ?? "—"}
           sub={pctChange != null && pctChange > 20 ? "Growing fast" : ""}
           loading={summaryLoading}
           icon={<TrendingUp className="h-4 w-4" />}
           highlight={pctChange != null && pctChange > 30}
+          tone="watch"
         />
         <StatCard
           label="Paying Customers"
@@ -122,14 +120,14 @@ export default function Dashboard() {
             <EmptyState message="No customer data yet. Send your first event with the SDK." />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-[13px]">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Customer</th>
-                    <th className="text-left px-4 py-2 text-xs font-medium text-muted-foreground">Plan</th>
-                    <th className="text-right px-4 py-2 text-xs font-medium text-muted-foreground">MRR</th>
-                    <th className="text-right px-4 py-2 text-xs font-medium text-muted-foreground">Cost (30d)</th>
-                    <th className="text-right px-4 py-2 text-xs font-medium text-muted-foreground">Margin</th>
+                    <th className="eyebrow text-left px-4 py-2 font-medium">Customer</th>
+                    <th className="eyebrow text-left px-4 py-2 font-medium">Plan</th>
+                    <th className="eyebrow text-right px-4 py-2 font-medium">MRR</th>
+                    <th className="eyebrow text-right px-4 py-2 font-medium whitespace-nowrap">Cost, 30d</th>
+                    <th className="eyebrow text-right px-4 py-2 font-medium">Margin</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -178,18 +176,18 @@ function CustomerTableRow({ customer: c, projectId }: { customer: CustomerRow; p
   const navigate = useNavigate();
   return (
     <tr
-      className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
+      className="border-b last:border-0 h-[38px] hover:bg-muted/30 cursor-pointer transition-colors"
       onClick={() => navigate(`/dashboard/${projectId}/customers/${c.customer_id}`)}
     >
-      <td className="px-4 py-3 font-mono text-xs text-foreground">
-        {c.customer_id.length > 20 ? c.customer_id.slice(0, 18) + "…" : c.customer_id}
+      <td className="px-4 font-mono text-xs text-foreground">
+        {c.customer_id.length > 26 ? c.customer_id.slice(0, 24) + "…" : c.customer_id}
       </td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{c.plan ?? "—"}</td>
-      <td className="px-4 py-3 text-right text-xs tabular-nums">
+      <td className="px-4 text-xs text-muted-foreground">{c.plan ?? "—"}</td>
+      <td className="px-4 text-right text-xs figure">
         {c.mrr != null ? formatCurrency(c.mrr) : <span className="text-muted-foreground">—</span>}
       </td>
-      <td className="px-4 py-3 text-right text-xs tabular-nums">{formatCurrency(c.total_cost)}</td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-4 text-right text-xs figure">{formatCurrency(c.total_cost)}</td>
+      <td className="px-4 text-right">
         {c.margin != null ? (
           <MarginBadge margin={c.margin} status={c.alert_status} />
         ) : (
@@ -204,18 +202,20 @@ function FeatureTableRow({ feature: f }: { feature: FeatureRow }) {
   return (
     <div className="px-4 py-3 flex items-center gap-3">
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-mono truncate">{f.feature}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {formatNumber(f.call_count)} calls · avg {formatCurrency(f.avg_cost_per_call)}
-        </p>
+        <p className="text-[13px] font-mono truncate">{f.feature}</p>
+        <div className="mt-1.5 bg-muted rounded-full h-1 overflow-hidden">
+          <div
+            className={`h-full rounded-full ${f.pct_of_bill > 40 ? "bg-watch" : "bg-foreground/50"}`}
+            style={{ width: `${Math.min(f.pct_of_bill, 100)}%` }}
+          />
+        </div>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-sm font-semibold">{formatCurrency(f.total_cost)}</p>
-        <p className="text-xs text-muted-foreground">{f.pct_of_bill}% of bill</p>
+        <p className="text-[13px] font-medium figure">{formatCurrency(f.total_cost)}</p>
+        <p className="text-xs text-muted-foreground figure">
+          {f.pct_of_bill}% · {formatNumber(f.call_count)} calls
+        </p>
       </div>
-      {f.pct_of_bill > 40 && (
-        <ArrowUpRight className="h-4 w-4 text-orange-500 shrink-0" />
-      )}
     </div>
   );
 }
@@ -323,6 +323,7 @@ function StatCard({
   loading,
   icon,
   highlight,
+  tone = "loss",
 }: {
   label: string;
   value: string;
@@ -330,19 +331,22 @@ function StatCard({
   loading: boolean;
   icon: React.ReactNode;
   highlight?: boolean;
+  tone?: "loss" | "watch";
 }) {
+  const highlightClass =
+    tone === "watch" ? "border-watch/40 bg-watch/5" : "border-loss/40 bg-loss/5";
   return (
-    <div className={`border rounded-xl px-4 py-3 ${highlight ? "border-destructive/50 bg-destructive/5" : "bg-card"}`}>
-      <div className="flex items-center gap-2 text-muted-foreground mb-1">
+    <div className={`border rounded-lg px-4 py-3.5 ${highlight ? highlightClass : "bg-card"}`}>
+      <div className="flex items-center gap-1.5 mb-1.5 [&_svg]:h-3.5 [&_svg]:w-3.5 text-muted-foreground">
         {icon}
-        <span className="text-xs">{label}</span>
+        <span className="eyebrow">{label}</span>
       </div>
       {loading ? (
-        <div className="h-6 w-24 bg-muted rounded animate-pulse" />
+        <div className="h-7 w-24 bg-muted rounded animate-pulse" />
       ) : (
-        <p className="text-xl font-bold tabular-nums">{value}</p>
+        <p className="text-[26px] leading-8 font-semibold figure tracking-tight">{value}</p>
       )}
-      {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-muted-foreground mt-1 figure">{sub}</p>}
     </div>
   );
 }

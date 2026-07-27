@@ -8,28 +8,25 @@ interface Props {
   showPercent?: boolean;
 }
 
+/**
+ * Margin figures follow the ledger's color rule: the tone encodes the
+ * decision boundary (healthy / watch / underwater), never decoration.
+ * Dot + tabular figure — no filled pills.
+ */
 export function MarginBadge({ margin, status, showPercent = true }: Props) {
   const config = {
-    ok:    { dot: "bg-green-500",  text: "text-green-700",  bg: "bg-green-50",  label: "" },
-    watch: { dot: "bg-yellow-500", text: "text-yellow-700", bg: "bg-yellow-50", label: "Watch" },
-    risk:  { dot: "bg-red-500",    text: "text-red-700",    bg: "bg-red-50",    label: "Risk" },
+    ok: { dot: "bg-profit", text: "text-profit", label: "" },
+    watch: { dot: "bg-watch", text: "text-watch", label: "watch" },
+    risk: { dot: "bg-loss", text: "text-loss", label: "risk" },
   }[status];
 
-  const display = margin != null
-    ? `${(margin * 100).toFixed(1)}%`
-    : "—";
+  const display = margin != null ? `${(margin * 100).toFixed(1)}%` : "—";
 
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium",
-        config.bg,
-        config.text,
-      )}
-    >
+    <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium figure", config.text)}>
       <span className={cn("h-1.5 w-1.5 rounded-full", config.dot)} />
       {showPercent ? display : null}
-      {config.label ? ` ${config.label}` : ""}
+      {config.label && <span className="text-[11px] font-normal opacity-80">{config.label}</span>}
     </span>
   );
 }

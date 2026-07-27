@@ -8,7 +8,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export default function Layout() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isDemo } = useAuth();
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
@@ -32,8 +32,13 @@ export default function Layout() {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
       <aside className="w-56 border-r flex flex-col bg-card">
-        <div className="h-14 flex items-center px-4 border-b">
+        <div className="h-14 flex items-center gap-2 px-4 border-b">
           <span className="font-semibold text-lg tracking-tight">Margined</span>
+          {isDemo && (
+            <span className="text-[10px] font-medium uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded">
+              Demo
+            </span>
+          )}
         </div>
 
         {/* Project selector */}
