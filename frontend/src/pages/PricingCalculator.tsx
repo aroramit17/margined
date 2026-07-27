@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { api, TierAnalysis } from "@/lib/api";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 
@@ -37,7 +37,7 @@ export default function PricingCalculator() {
           step={0.05}
           value={targetMargin}
           onChange={(e) => setTargetMargin(parseFloat(e.target.value))}
-          className="w-full"
+          className="w-full accent-foreground"
         />
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>30%</span>
@@ -107,22 +107,22 @@ function TierCard({ tier, targetMargin }: { tier: TierAnalysis; targetMargin: nu
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">P99 COGS</p>
-            <p className="font-semibold text-orange-600">{formatCurrency(tier.p99_cogs)}</p>
+            <p className="font-semibold figure text-watch">{formatCurrency(tier.p99_cogs)}</p>
             <p className="text-xs text-muted-foreground">heaviest users</p>
           </div>
         </div>
 
         {/* Price recommendation */}
-        <div className="bg-muted/40 rounded-lg px-4 py-3 space-y-2">
+        <div className="bg-muted/40 rounded-md px-4 py-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Break-even price</span>
-            <span className="font-mono text-sm">{formatCurrency(tier.break_even_price)}/mo</span>
+            <span className="text-sm text-muted-foreground">Break-even price (median COGS)</span>
+            <span className="figure text-sm">{formatCurrency(tier.break_even_price)}/mo</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">
               Recommended price <span className="text-xs text-muted-foreground">(for {(targetMargin * 100).toFixed(0)}% margin)</span>
             </span>
-            <span className="font-mono text-lg font-bold text-primary">
+            <span className="figure text-lg font-semibold">
               {formatCurrency(tier.recommended_price)}/mo
             </span>
           </div>
@@ -153,11 +153,11 @@ function TierCard({ tier, targetMargin }: { tier: TierAnalysis; targetMargin: nu
 
         {/* Usage cap recommendation */}
         {tier.usage_cap_recommendation && (
-          <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2.5 text-sm">
-            <AlertTriangle className="h-4 w-4 text-orange-600 shrink-0 mt-0.5" />
-            <p className="text-orange-800">
+          <div className="flex items-start gap-2 bg-watch/10 border border-watch/30 rounded-md px-3 py-2.5 text-sm">
+            <AlertTriangle className="h-4 w-4 text-watch shrink-0 mt-0.5" />
+            <p>
               Consider a usage cap at{" "}
-              <strong>{formatNumber(tier.usage_cap_recommendation)} calls/month</strong>{" "}
+              <strong className="figure">{formatNumber(tier.usage_cap_recommendation)} calls/month</strong>{" "}
               on this tier to protect against P99 margin bleed.
             </p>
           </div>
@@ -180,22 +180,17 @@ function MarginRow({
 }) {
   const pct = (margin * 100).toFixed(1);
   const ok = margin >= targetMargin;
+  const tone = ok ? "profit" : margin >= 0 ? "watch" : "loss";
+  const toneText = { profit: "text-profit", watch: "text-watch", loss: "text-loss" }[tone];
+  const toneDot = { profit: "bg-profit", watch: "bg-watch", loss: "bg-loss" }[tone];
 
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-1.5">
-        {ok ? (
-          <Check className="h-3.5 w-3.5 text-green-500" />
-        ) : (
-          <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
-        )}
-        <span
-          className={ok ? "text-green-700 font-medium" : "text-red-700 font-medium"}
-        >
-          {pct}%
-        </span>
-      </div>
+      <span className={`inline-flex items-center gap-1.5 font-medium figure ${toneText}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${toneDot}`} />
+        {pct}%
+      </span>
     </div>
   );
 }

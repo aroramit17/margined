@@ -237,7 +237,7 @@ export function demoCalculator(targetMargin: number): PricingResult {
     const medianCogs = pick(costs, 50);
     const p90Cogs = pick(costs, 90);
     const p99Cogs = pick(costs, 99);
-    const breakEven = medianCogs / (1 - targetMargin);
+    const recommended = medianCogs / (1 - targetMargin);
     const marginAt = (cogs: number) =>
       Math.round(((tier.mrr - cogs) / tier.mrr) * 10000) / 10000;
     return {
@@ -248,8 +248,8 @@ export function demoCalculator(targetMargin: number): PricingResult {
       p90_calls: pick(calls, 90),
       p90_cogs: Math.round(p90Cogs * 100) / 100,
       p99_cogs: Math.round(p99Cogs * 100) / 100,
-      break_even_price: Math.round(breakEven * 100) / 100,
-      recommended_price: Math.round(breakEven * 100) / 100,
+      break_even_price: Math.round(medianCogs * 100) / 100,
+      recommended_price: Math.round(recommended * 100) / 100,
       current_price: tier.mrr,
       margin_at_median: marginAt(medianCogs),
       margin_at_p90: marginAt(p90Cogs),

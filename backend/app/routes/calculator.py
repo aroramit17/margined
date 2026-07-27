@@ -17,14 +17,11 @@ router = APIRouter()
 
 User = Annotated[dict, Depends(get_current_user)]
 
-SAFETY_MULTIPLE = 3.0   # recommended_price = break_even * SAFETY_MULTIPLE
-
-
-def _recommended_price(break_even: float, target_margin: float) -> float:
-    """Price required to achieve target_margin: price = break_even / (1 - margin)."""
+def _recommended_price(median_cogs: float, target_margin: float) -> float:
+    """Price required to achieve target_margin: price = COGS / (1 - margin)."""
     if target_margin >= 1.0:
         target_margin = 0.99
-    return break_even / (1 - target_margin)
+    return median_cogs / (1 - target_margin)
 
 
 def _margin_at_cogs(price: Optional[float], cogs: float) -> float:
@@ -119,7 +116,9 @@ def pricing_calculator(
         median_calls = statistics.median(sorted_calls) if calls else 0.0
         p90_calls = percentile(sorted_calls, 90)
 
-        break_even = median_cogs / (1 - target_margin) if median_cogs > 0 else 0
+        # Break-even: the price at which the median customer's margin is 0 —
+        # i.e. their COGS. Recommended: the price that hits the target margin.
+        break_even = median_cogs
         recommended = _recommended_price(median_cogs, target_margin)
 
         current_price = statistics.median(mrrs) if mrrs else None
