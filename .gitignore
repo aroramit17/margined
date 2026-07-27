@@ -28,3 +28,8 @@ supabase/.temp/
 .playwright-mcp/
 *.png
 !frontend/public/*.png
+sdk/dist/
+sdk-node/dist/
+*.tgz
+.vercel/
+.env.local

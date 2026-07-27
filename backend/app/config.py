@@ -4,9 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    supabase_url: str
-    supabase_service_role_key: str
-    supabase_anon_key: str
+    # Empty defaults let the API boot before Supabase is configured; every
+    # DB-touching route fails soft (get_db raises, handlers catch).
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_anon_key: str = ""
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""

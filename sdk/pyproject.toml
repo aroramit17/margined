@@ -36,7 +36,7 @@ dev = [
 [project.urls]
 Homepage = "https://trymargined.com"
 Documentation = "https://docs.trymargined.com"
-Repository = "https://github.com/trymargined/margined-python"
+Repository = "https://github.com/pushkalkumar/margined"
 
 [tool.hatch.build.targets.wheel]
 packages = ["margined"]

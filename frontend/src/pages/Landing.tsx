@@ -30,7 +30,7 @@ export default function Landing() {
               Pricing
             </a>
             <a
-              href="https://github.com/trymargined/margined"
+              href="https://github.com/pushkalkumar/margined"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
               GitHub
@@ -64,7 +64,7 @@ export default function Landing() {
             Explore the live demo
           </Link>
           <a
-            href="https://github.com/trymargined/margined"
+            href="https://github.com/pushkalkumar/margined"
             className="link-quiet text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Read the quickstart
@@ -254,7 +254,7 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4 text-[13px] text-muted-foreground">
           <span className="font-display italic text-base text-foreground">Margined</span>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <a href="https://github.com/trymargined/margined" className="hover:text-foreground transition-colors">
+            <a href="https://github.com/pushkalkumar/margined" className="hover:text-foreground transition-colors">
               GitHub
             </a>
             <Link to="/dashboard" className="hover:text-foreground transition-colors">
