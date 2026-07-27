@@ -1,8 +1,9 @@
 import { Outlet, Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Settings, LogOut, ChevronDown, Plus, TrendingUp } from "lucide-react";
+import { BarChart3, Settings, LogOut, ChevronDown, Plus, TrendingUp, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { applyTheme, getTheme, type Theme } from "@/lib/theme";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -100,13 +101,16 @@ export default function Layout() {
           <div className="text-xs text-muted-foreground truncate mb-2 px-2">
             {user?.email}
           </div>
-          <button
-            onClick={() => signOut()}
-            className="flex items-center gap-2 px-2 py-1.5 rounded text-sm text-muted-foreground hover:text-foreground hover:bg-muted w-full transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-2 px-2 py-1.5 rounded text-sm text-muted-foreground hover:text-foreground hover:bg-muted flex-1 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 
@@ -115,5 +119,25 @@ export default function Layout() {
         <Outlet />
       </main>
     </div>
+  );
+}
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<Theme>(getTheme());
+
+  function toggle() {
+    const next = theme === "dark" ? "light" : "dark";
+    applyTheme(next);
+    setTheme(next);
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+    >
+      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
   );
 }

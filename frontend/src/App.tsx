@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Onboarding from "@/pages/Onboarding";
 import Dashboard from "@/pages/Dashboard";
@@ -15,9 +16,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function Home() {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading…</div>;
+  return user ? <Navigate to="/dashboard" replace /> : <Landing />;
+}
+
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route
         path="/onboarding"
@@ -28,14 +36,12 @@ export default function App() {
         }
       />
       <Route
-        path="/"
         element={
           <ProtectedRoute>
             <Layout />
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="dashboard/:projectId" element={<Dashboard />} />
         <Route path="dashboard/:projectId/customers/:customerId" element={<CustomerDetail />} />

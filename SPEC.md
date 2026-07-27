@@ -1,5 +1,10 @@
 # Margined — Full Product Spec
 
+> **Update (2026-07-27):** the competitive table below predates the July 2026 market research.
+> Current landscape, ICP, defensibility, and messaging live in [docs/positioning.md](docs/positioning.md)
+> (short version: Helicone is gone, Langfuse is ClickHouse-owned with no revenue join,
+> Revenium/Paid.ai serve enterprises and agent companies, and the founder segment is open).
+
 **Tagline:** Know which AI features are profitable. Know which customers are costing you money. Ship the pricing that actually works.
 
 **Working title:** Margined  

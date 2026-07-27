@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "margined"
-version = "0.1.0"
-description = "Know which AI features are profitable. Know which customers are costing you money."
+version = "0.2.0"
+description = "LLM unit economics: cost, margin, and profitability per customer and feature."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -40,3 +40,6 @@ Repository = "https://github.com/trymargined/margined-python"
 
 [tool.hatch.build.targets.wheel]
 packages = ["margined"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"margined/py.typed" = "margined/py.typed"

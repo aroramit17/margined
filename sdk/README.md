@@ -1,45 +1,24 @@
 # Margined Python SDK
 
-> Know which AI features are profitable. Know which customers are costing you money.
+> LLM unit economics: cost, margin, and profitability per customer and feature.
 
-Add **one argument** to your existing LLM calls. Get a dashboard showing LLM cost per customer, feature profitability, and gross margin — without changing how your app works.
-
-## Install
+Add **one argument** to your existing LLM calls. Get gross margin per customer, cost per feature, and the price you need to charge — without changing how your app works.
 
 ```bash
 pip install margined
 ```
 
-## Quickstart — Auto-patch (recommended)
-
-Two lines. No call-site changes. Tracks every LLM call in your app automatically.
+## Quickstart
 
 ```python
 import margined
-margined.patch_anthropic()   # intercepts all anthropic.Anthropic() calls
-margined.patch_openai()      # intercepts all openai.OpenAI() calls
-
-# Tell Margined who the current user is (e.g. Flask):
-margined.set_context(
-    user_id=lambda: g.current_user.id,
-    feature=lambda: request.endpoint,
-)
-```
-
-That's it. Every LLM call in your app — including calls from third-party libraries — is now tracked.
-
-## Alternative — Explicit wrapper
-
-For per-call control:
-
-```python
-margined.init(api_key="your-api-key")
+margined.init()  # reads MARGINED_API_KEY
 
 response = margined.track(
     client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}]
+        messages=[{"role": "user", "content": prompt}],
     ),
     user_id=current_user.id,
     feature="summarize_document",
@@ -48,49 +27,94 @@ response = margined.track(
 
 `track()` returns the **exact same response object**, unchanged. Zero risk to existing code.
 
-## Agent Runs
-
-For multi-step agent workflows, group all calls under one run:
+## Auto-patch (zero call-site changes)
 
 ```python
-with margined.track.run(user_id=user.id, feature="research_agent") as run:
+import margined
+margined.init()
+margined.patch_anthropic()   # sync + async clients
+margined.patch_openai()      # sync + async clients
+
+# Tell Margined who the current user is (e.g. Flask):
+margined.set_context(
+    user_id=lambda: g.current_user.id,
+    feature=lambda: request.endpoint,
+)
+```
+
+Every LLM call in your app — including calls made by third-party libraries — is now tracked.
+
+## Decorator + scoped identity
+
+```python
+@margined.feature("research_agent")
+async def run_research(user, query):
+    async with margined.identify(user.id):
+        return await client.messages.create(...)
+```
+
+## Streaming
+
+Streams report usage only at the end; wrap them and Margined records one event when the stream completes:
+
+```python
+stream = margined.track_stream(
+    client.messages.create(..., stream=True),
+    user_id=user.id, feature="chat",
+)
+for event in stream:
+    ...
+```
+
+For OpenAI, pass `stream_options={"include_usage": True}` so the final chunk carries usage. Auto-patched clients wrap streams automatically.
+
+## Agent runs
+
+Group multi-step agent workflows under one run — the dashboard shows cost per run (p50/p90/p99), not just cost per call:
+
+```python
+with margined.run(user_id=user.id, feature="research_agent") as r:
     step1 = client.messages.create(...)   # auto-tracked
-    step2 = client.messages.create(...)   # auto-tracked
-    run.tag({"steps": 2, "cached": False})
-# Total cost of the entire agent run recorded as one unit
+    step2 = client.messages.create(...)
+    r.tag({"steps": 2})
 ```
 
-## Supported Providers
+## Guarantees
 
-| Provider | Models |
-|----------|--------|
-| Anthropic | claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5 |
-| OpenAI | gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo |
-| Groq | llama-3.1-70b, llama-3.1-8b, mixtral-8x7b |
-| Together AI | Meta Llama, Mixtral |
+The SDK is built to the same standard as Sentry/PostHog-class telemetry SDKs:
 
-Cost is computed **locally** from a bundled price table — no extra round-trip latency.
+- **Fail-open.** Tracking never raises into your application and never blocks a request thread. If Margined is down, your app is unaffected.
+- **Background delivery.** Events batch in memory and flush every 5 seconds (or at 100 events) on a daemon thread, with retry + exponential backoff on transient failures.
+- **Bounded memory.** The queue caps at 10,000 events and drops the oldest under sustained backpressure (drops are counted and reported).
+- **No double counting.** Every event carries an idempotency key; a retried flush can never inflate your costs.
+- **Cache-aware pricing.** Prompt-cache reads and writes are priced at each provider's actual discount rates, and OpenAI cached tokens are separated from the uncached input count.
+- **Local cost computation.** Cost is computed from a bundled, versioned price table (`margined.PRICES_VERSION`) — no network round-trip on the hot path. The ingest API independently recomputes cost server-side, so a stale client table can't skew your dashboard.
 
-## Serverless / Edge
+## Providers
 
-In serverless environments, call `margined.flush()` before the function exits to ensure events are sent:
+Anthropic, OpenAI, Google Gemini, Groq, Mistral, DeepSeek, Together AI — with prefix matching for dated model snapshots and provider-prefixed IDs (`anthropic.claude-…`, `openai/gpt-…`).
+
+## Configuration
 
 ```python
-# At the end of your handler:
-margined.flush()
+margined.init(
+    api_key="mgd_...",       # or MARGINED_API_KEY
+    endpoint="https://...",  # or MARGINED_ENDPOINT (self-hosting)
+    sample_rate=1.0,         # record a fraction of events
+    disabled=False,          # or MARGINED_DISABLED=1 (tests/CI)
+    debug=False,             # or MARGINED_DEBUG=1
+)
 ```
 
-## Environment Variables
+## Serverless / short-lived processes
 
-| Variable | Description |
-|----------|-------------|
-| `MARGINED_API_KEY` | Your project API key (auto-initializes SDK) |
+Call `margined.flush()` before the function exits (or `margined.shutdown()` to also stop the worker). The SDK also registers an atexit hook that drains the queue with a single best-effort attempt.
 
 ## Dashboard
 
-Events appear in your [Margined dashboard](https://app.trymargined.com) in real time. The dashboard shows:
+Events appear in your [Margined dashboard](https://app.trymargined.com) in real time:
 
-- **LLM cost per customer** — who is costing you the most?
-- **Feature profitability** — which features are margin drains?
 - **Gross margin per customer** — connect Stripe to see revenue vs. cost
-- **Pricing calculator** — what do you need to charge to hit 70% gross margin?
+- **Cost per feature** — which product surface burns your bill
+- **Pricing calculator** — break-even and recommended prices from your real p50/p90/p99 usage
+- **Margin-at-risk alerts** — email/Slack before a customer goes underwater

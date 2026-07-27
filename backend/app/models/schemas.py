@@ -12,14 +12,17 @@ from pydantic import BaseModel, Field
 # ──────────────────────────────────────────────
 
 class LLMEventIn(BaseModel):
-    customer_id: str
-    feature: str
-    run_id: Optional[str] = None
-    model: str
-    provider: str
-    input_tokens: int = Field(ge=0)
-    output_tokens: int = Field(ge=0)
-    cost_usd: float = Field(ge=0)
+    customer_id: str = Field(min_length=1, max_length=512)
+    feature: str = Field(min_length=1, max_length=512)
+    run_id: Optional[str] = Field(default=None, max_length=128)
+    event_id: Optional[str] = Field(default=None, max_length=64)
+    model: str = Field(min_length=1, max_length=512)
+    provider: str = Field(default="unknown", max_length=64)
+    input_tokens: int = Field(ge=0, le=100_000_000)
+    output_tokens: int = Field(ge=0, le=100_000_000)
+    cache_read_tokens: int = Field(default=0, ge=0, le=100_000_000)
+    cache_write_tokens: int = Field(default=0, ge=0, le=100_000_000)
+    cost_usd: float = Field(default=0.0, ge=0, le=100_000)
     occurred_at: datetime
     metadata: dict[str, Any] = {}
 
@@ -92,6 +95,18 @@ class SummaryOut(BaseModel):
     customers_at_risk: int
     top_cost_driver_feature: Optional[str]
     total_customers: int
+
+
+class TrendPoint(BaseModel):
+    date: date
+    cost: float
+    calls: int
+
+
+class TrendOut(BaseModel):
+    points: list[TrendPoint]
+    total_cost: float
+    total_calls: int
 
 
 # ──────────────────────────────────────────────

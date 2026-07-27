@@ -60,6 +60,10 @@ export const api = {
       total_customers: number;
     }>(`/projects/${projectId}/summary`),
 
+  // ── Trend ──────────────────────────────────────────────
+  trend: (projectId: string, days = 30) =>
+    apiFetch<TrendResult>(`/projects/${projectId}/trend?days=${days}`),
+
   // ── Customers ──────────────────────────────────────────
   customers: {
     list: (projectId: string, params?: { from?: string; to?: string }) => {
@@ -115,6 +119,10 @@ export const api = {
         method: "POST",
         body: JSON.stringify(body),
       }),
+    refresh: (projectId: string) =>
+      apiFetch<{ refreshed: number }>(`/stripe/customers/${projectId}/refresh`, {
+        method: "POST",
+      }),
   },
 };
 
@@ -141,6 +149,18 @@ export type CustomerDetail = CustomerRow & {
     occurred_at: string;
     run_id: string | null;
   }[];
+};
+
+export type TrendPoint = {
+  date: string;
+  cost: number;
+  calls: number;
+};
+
+export type TrendResult = {
+  points: TrendPoint[];
+  total_cost: number;
+  total_calls: number;
 };
 
 export type FeatureRow = {

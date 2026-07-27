@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -9,8 +10,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -184,10 +185,10 @@ function CustomerTableRow({ customer: c, projectId }: { customer: CustomerRow; p
         {c.customer_id.length > 20 ? c.customer_id.slice(0, 18) + "…" : c.customer_id}
       </td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{c.plan ?? "—"}</td>
-      <td className="px-4 py-3 text-right text-xs">
+      <td className="px-4 py-3 text-right text-xs tabular-nums">
         {c.mrr != null ? formatCurrency(c.mrr) : <span className="text-muted-foreground">—</span>}
       </td>
-      <td className="px-4 py-3 text-right text-xs font-mono">{formatCurrency(c.total_cost)}</td>
+      <td className="px-4 py-3 text-right text-xs tabular-nums">{formatCurrency(c.total_cost)}</td>
       <td className="px-4 py-3 text-right">
         {c.margin != null ? (
           <MarginBadge margin={c.margin} status={c.alert_status} />
@@ -220,15 +221,96 @@ function FeatureTableRow({ feature: f }: { feature: FeatureRow }) {
 }
 
 function TrendChart({ projectId }: { projectId: string }) {
-  // Derive daily trend from customers endpoint with daily granularity
-  // For now show a placeholder using summary data
+  const [days, setDays] = useState(30);
+  const { data: trend, isLoading } = useQuery({
+    queryKey: ["trend", projectId, days],
+    queryFn: () => api.trend(projectId, days),
+  });
+
+  const hasData = (trend?.total_calls ?? 0) > 0;
+
   return (
     <div className="border rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b bg-card">
-        <h2 className="font-semibold text-sm">Monthly Trend</h2>
+        <div className="flex items-baseline gap-3">
+          <h2 className="font-semibold text-sm">Daily LLM Cost</h2>
+          {trend && hasData && (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {formatCurrency(trend.total_cost)} · {formatNumber(trend.total_calls)} calls
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1">
+          {[7, 30, 90].map((option) => (
+            <button
+              key={option}
+              onClick={() => setDays(option)}
+              className={`px-2 py-0.5 rounded text-xs transition-colors ${
+                days === option
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {option}d
+            </button>
+          ))}
+        </div>
       </div>
-      <div className="p-4 h-48 flex items-center justify-center text-muted-foreground text-sm">
-        <p>Connect the SDK to populate the trend chart.</p>
+      <div className="p-4 h-56">
+        {isLoading ? (
+          <div className="h-full bg-muted rounded animate-pulse" />
+        ) : !hasData ? (
+          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+            Send events with the SDK to populate the trend chart.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={trend!.points} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+              <defs>
+                <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(d) => format(parseISO(d), "MMM d")}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={32}
+              />
+              <YAxis
+                tickFormatter={(v) => `$${v}`}
+                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tickLine={false}
+                axisLine={false}
+                width={44}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  color: "hsl(var(--foreground))",
+                }}
+                formatter={(value: number, name: string) =>
+                  name === "cost" ? [formatCurrency(value), "Cost"] : [formatNumber(value), "Calls"]
+                }
+                labelFormatter={(d) => format(parseISO(d as string), "EEE, MMM d")}
+              />
+              <Area
+                type="monotone"
+                dataKey="cost"
+                stroke="hsl(var(--primary))"
+                strokeWidth={1.5}
+                fill="url(#costFill)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
@@ -258,7 +340,7 @@ function StatCard({
       {loading ? (
         <div className="h-6 w-24 bg-muted rounded animate-pulse" />
       ) : (
-        <p className="text-xl font-bold">{value}</p>
+        <p className="text-xl font-bold tabular-nums">{value}</p>
       )}
       {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
     </div>
