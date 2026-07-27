@@ -110,6 +110,17 @@ const realApi = {
       }),
   },
 
+  // ── Billing (Margined's own) ───────────────────────────
+  billing: {
+    status: () => apiFetch<BillingStatus>("/billing/status"),
+    checkout: (plan: "starter" | "growth") =>
+      apiFetch<{ url: string }>("/billing/checkout", {
+        method: "POST",
+        body: JSON.stringify({ plan }),
+      }),
+    portal: () => apiFetch<{ url: string }>("/billing/portal", { method: "POST" }),
+  },
+
   // ── Stripe ─────────────────────────────────────────────
   stripe: {
     listCustomers: (projectId: string) =>
@@ -161,6 +172,17 @@ function buildDemoApi(): typeof realApi {
       delete: () => Promise.resolve(undefined),
       toggle: (_projectId: string, _alertId: string, enabled: boolean) =>
         demo().then((d) => d.demoResponse({ ...d.demoAlerts[0], enabled })),
+    },
+    billing: {
+      status: () =>
+        Promise.resolve({
+          plan: "starter" as const,
+          events_used: 412_384,
+          events_limit: 1_000_000,
+          month: new Date().toISOString().slice(0, 7),
+        }),
+      checkout: () => Promise.resolve({ url: "#" }),
+      portal: () => Promise.resolve({ url: "#" }),
     },
     stripe: {
       listCustomers: () => demo().then((d) => d.demoResponse(d.demoStripeCustomers)),
@@ -260,6 +282,13 @@ export type CreateAlertBody = {
   threshold: number;
   channel: "email" | "slack";
   destination: string;
+};
+
+export type BillingStatus = {
+  plan: "free" | "starter" | "growth";
+  events_used: number;
+  events_limit: number | null;
+  month: string;
 };
 
 export type StripeCustomer = {

@@ -14,6 +14,10 @@ const usd = (n: number) =>
 
 const toneClass = { profit: "text-profit", watch: "text-watch", loss: "text-loss" };
 
+/** Accounting convention: negatives in parentheses, not minus signs. */
+const marginFigure = (margin: number) =>
+  margin < 0 ? `(${Math.abs(margin).toFixed(1)})%` : `${margin.toFixed(1)}%`;
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -44,7 +48,7 @@ export default function Landing() {
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-20 pb-14">
         <p className="eyebrow mb-5">Unit economics for AI SaaS</p>
-        <h1 className="font-display text-[44px] sm:text-[60px] leading-[1.04] tracking-[-0.02em] font-medium max-w-3xl">
+        <h1 className="font-display display-opsz text-[44px] sm:text-[60px] leading-[1.04] tracking-[-0.02em] font-medium max-w-[16ch]">
           The P&L your LLM bill is&nbsp;hiding.
         </h1>
         <p className="mt-6 text-lg leading-relaxed text-muted-foreground max-w-xl">
@@ -61,7 +65,7 @@ export default function Landing() {
           </Link>
           <a
             href="https://github.com/trymargined/margined"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-border"
+            className="link-quiet text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             Read the quickstart
           </a>
@@ -74,9 +78,12 @@ export default function Landing() {
       {/* Signature: the statement */}
       <section className="max-w-5xl mx-auto px-6 pb-24">
         <div className="bg-card border rounded-lg overflow-hidden">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3 border-b">
-            <span className="eyebrow">Briefly, Inc. — statement of AI unit economics</span>
-            <span className="eyebrow">July 2026 · prepared by Margined</span>
+          <div className="px-5 py-3 border-b">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="eyebrow">Briefly, Inc. — statement of AI unit economics</span>
+              <span className="eyebrow">July 2026 · prepared by Margined</span>
+            </div>
+            <p className="units-line mt-1">(in USD; margins as a percentage of MRR)</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">
@@ -101,18 +108,18 @@ export default function Landing() {
                     <td className="px-3 text-right figure">{usd(row.mrr)}</td>
                     <td className="px-3 text-right figure">{usd(row.cost)}</td>
                     <td className={`px-5 text-right figure font-medium ${toneClass[row.tone]}`}>
-                      {row.margin.toFixed(1)}%
+                      {marginFigure(row.margin)}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr className="statement-row border-t h-[38px]" style={{ animationDelay: "680ms" }}>
-                  <td className="px-5 font-medium">34 customers</td>
+                <tr className="statement-row statement-total h-[40px]" style={{ animationDelay: "680ms" }}>
+                  <td className="px-5">34 customers</td>
                   <td className="px-3" />
-                  <td className="px-3 text-right figure font-medium">$3,858.00</td>
-                  <td className="px-3 text-right figure font-medium">$487.20</td>
-                  <td className="px-5 text-right figure font-medium">87.4%</td>
+                  <td className="px-3 text-right figure">$3,858.00</td>
+                  <td className="px-3 text-right figure">$487.20</td>
+                  <td className="px-5 text-right figure">87.4%</td>
                 </tr>
               </tfoot>
             </table>
@@ -246,12 +253,24 @@ export default function Landing() {
       <footer className="border-t">
         <div className="max-w-5xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4 text-[13px] text-muted-foreground">
           <span className="font-display italic text-base text-foreground">Margined</span>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
             <a href="https://github.com/trymargined/margined" className="hover:text-foreground transition-colors">
               GitHub
             </a>
             <Link to="/dashboard" className="hover:text-foreground transition-colors">
               Live demo
+            </Link>
+            <Link to="/changelog" className="hover:text-foreground transition-colors">
+              Changelog
+            </Link>
+            <Link to="/security" className="hover:text-foreground transition-colors">
+              Security
+            </Link>
+            <Link to="/terms" className="hover:text-foreground transition-colors">
+              Terms
+            </Link>
+            <Link to="/privacy" className="hover:text-foreground transition-colors">
+              Privacy
             </Link>
             <Link to="/login" className="hover:text-foreground transition-colors">
               Sign in

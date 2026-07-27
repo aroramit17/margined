@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Copy, Check, Trash2, Plus, Bell, Link as LinkIcon } from "lucide-react";
+import { Copy, Check, Trash2, Plus, Bell, CreditCard, Link as LinkIcon } from "lucide-react";
 import { api, AlertConfig, CreateAlertBody } from "@/lib/api";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumber } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 
 export default function Settings() {
@@ -82,6 +82,9 @@ export default function Settings() {
         </Section>
       )}
 
+      {/* Billing */}
+      <BillingSection />
+
       {/* Alerts */}
       <Section title="Alerts" icon={<Bell className="h-4 w-4" />}>
         {alerts.length === 0 ? (
@@ -142,6 +145,83 @@ export default function Settings() {
         )}
       </Section>
     </div>
+  );
+}
+
+const PLAN_LABELS: Record<string, string> = {
+  free: "Free",
+  starter: "Starter — $49/mo",
+  growth: "Growth — $149/mo",
+};
+
+function BillingSection() {
+  const { data: billing } = useQuery({
+    queryKey: ["billing"],
+    queryFn: api.billing.status,
+  });
+
+  async function goTo(fn: () => Promise<{ url: string }>) {
+    try {
+      const { url } = await fn();
+      if (url && url !== "#") window.location.href = url;
+    } catch {
+      // surfaced by button state; billing is optional in demo mode
+    }
+  }
+
+  if (!billing) return null;
+  const pct =
+    billing.events_limit != null
+      ? Math.min((billing.events_used / billing.events_limit) * 100, 100)
+      : 0;
+  const nearLimit = billing.events_limit != null && pct >= 80;
+
+  return (
+    <Section title="Plan & Usage" icon={<CreditCard className="h-4 w-4" />}>
+      <div className="border rounded-lg px-4 py-3.5 space-y-3">
+        <div className="flex items-baseline justify-between">
+          <p className="text-sm font-medium">{PLAN_LABELS[billing.plan] ?? billing.plan}</p>
+          <p className="text-xs text-muted-foreground figure">
+            {formatNumber(billing.events_used)}
+            {billing.events_limit != null
+              ? ` / ${formatNumber(billing.events_limit)} events`
+              : " events · unlimited"}{" "}
+            this month
+          </p>
+        </div>
+        {billing.events_limit != null && (
+          <div className="bg-muted rounded-full h-1 overflow-hidden">
+            <div
+              className={`h-full rounded-full ${nearLimit ? "bg-watch" : "bg-foreground/50"}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        )}
+        {nearLimit && (
+          <p className="text-xs text-watch">
+            Events beyond the plan limit are dropped. Upgrade to keep tracking.
+          </p>
+        )}
+        <div className="flex gap-2 pt-1">
+          {billing.plan !== "growth" && (
+            <button
+              onClick={() => goTo(() => api.billing.checkout(billing.plan === "free" ? "starter" : "growth"))}
+              className="bg-primary text-primary-foreground px-3 py-1.5 rounded-md text-[13px] font-medium hover:opacity-90 active:scale-[0.96] transition-[opacity,scale]"
+            >
+              Upgrade to {billing.plan === "free" ? "Starter" : "Growth"}
+            </button>
+          )}
+          {billing.plan !== "free" && (
+            <button
+              onClick={() => goTo(api.billing.portal)}
+              className="border px-3 py-1.5 rounded-md text-[13px] hover:bg-muted transition-colors"
+            >
+              Manage subscription
+            </button>
+          )}
+        </div>
+      </div>
+    </Section>
   );
 }
 

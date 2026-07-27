@@ -20,7 +20,13 @@ export function MarginBadge({ margin, status, showPercent = true }: Props) {
     risk: { dot: "bg-loss", text: "text-loss", label: "risk" },
   }[status];
 
-  const display = margin != null ? `${(margin * 100).toFixed(1)}%` : "—";
+  // Accounting convention: negatives in parentheses.
+  const display =
+    margin == null
+      ? "—"
+      : margin < 0
+        ? `(${Math.abs(margin * 100).toFixed(1)})%`
+        : `${(margin * 100).toFixed(1)}%`;
 
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium figure", config.text)}>

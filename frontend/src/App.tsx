@@ -7,6 +7,10 @@ import Dashboard from "@/pages/Dashboard";
 import CustomerDetail from "@/pages/CustomerDetail";
 import PricingCalculator from "@/pages/PricingCalculator";
 import Settings from "@/pages/Settings";
+import Security from "@/pages/docs/Security";
+import Terms from "@/pages/docs/Terms";
+import Privacy from "@/pages/docs/Privacy";
+import Changelog from "@/pages/docs/Changelog";
 import Layout from "@/components/Layout";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -27,6 +31,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/security" element={<Security />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/changelog" element={<Changelog />} />
       <Route path="/login" element={<Login />} />
       <Route
         path="/onboarding"

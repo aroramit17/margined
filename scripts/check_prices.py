@@ -19,11 +19,47 @@ from margined._pricing import PRICES as SDK_PRICES, PRICES_VERSION as SDK_VERSIO
 from app.pricing import PRICES as API_PRICES, PRICES_VERSION as API_VERSION  # noqa: E402
 
 
+def parse_node_table() -> tuple[str, dict]:
+    """Parse the generated sdk-node/src/prices.ts (regular structure)."""
+    import re
+
+    text = (ROOT / "sdk-node" / "src" / "prices.ts").read_text()
+    version = re.search(r'PRICES_VERSION = "([^"]+)"', text).group(1)
+    prices = {}
+    for match in re.finditer(r'"([^"]+)": \{ ([^}]+) \},', text):
+        model, body = match.groups()
+        entry = {}
+        for pair in body.split(", "):
+            key, value = pair.split(": ")
+            entry[key] = float(value)
+        prices[model] = entry
+    return version, prices
+
+
 def main() -> int:
     errors = []
 
     if SDK_VERSION != API_VERSION:
         errors.append(f"version mismatch: sdk={SDK_VERSION} backend={API_VERSION}")
+
+    node_version, node_prices = parse_node_table()
+    if node_version != API_VERSION:
+        errors.append(f"version mismatch: node={node_version} backend={API_VERSION}")
+    for model, (inp, out, cache_read, cache_write) in API_PRICES.items():
+        node = node_prices.get(model)
+        if node is None:
+            errors.append(f"missing in node sdk: {model}")
+            continue
+        expected = {"inp": inp, "out": out}
+        if cache_read is not None:
+            expected["cacheRead"] = cache_read
+        if cache_write is not None:
+            expected["cacheWrite"] = cache_write
+        if node != expected:
+            errors.append(f"node mismatch for {model}: {node} != {expected}")
+    for model in node_prices:
+        if model not in API_PRICES:
+            errors.append(f"extra in node sdk: {model}")
 
     sdk_models = set(SDK_PRICES)
     api_models = set(API_PRICES)

@@ -10,7 +10,12 @@ class Settings(BaseSettings):
 
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
+    stripe_billing_webhook_secret: str = ""
     stripe_client_id: str = ""
+    stripe_price_starter: str = ""
+    stripe_price_growth: str = ""
+
+    frontend_url: str = "https://trymargined.vercel.app"
 
     resend_api_key: str = ""
 

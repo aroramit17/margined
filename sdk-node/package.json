@@ -1,0 +1,45 @@
+{
+  "name": "margined",
+  "version": "0.2.0",
+  "description": "LLM unit economics: cost, margin, and profitability per customer and feature.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "llm",
+    "cost",
+    "margin",
+    "unit-economics",
+    "anthropic",
+    "openai",
+    "stripe"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trymargined/margined",
+    "directory": "sdk-node"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.0"
+  }
+}

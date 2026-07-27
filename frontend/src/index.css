@@ -64,16 +64,23 @@
 }
 
 @layer base {
+  :root {
+    /* One signature easing, used everywhere. Deliberate, machine-precise. */
+    --ease: cubic-bezier(0.87, 0, 0.13, 1);
+  }
+
   * {
     @apply border-border;
   }
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-background text-foreground font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
+    font-optical-sizing: auto;
   }
   h1, h2, h3 {
     text-wrap: balance;
@@ -81,19 +88,88 @@
   p {
     text-wrap: pretty;
   }
+
+  /* Inverted selection — the ledger's ink and paper trade places. */
+  ::selection {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+  }
+
+  /* Focus: double-layer ring that reads on any surface. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 2px;
+    box-shadow: 0 0 0 4px hsl(var(--background));
+  }
+
+  /* Thin instrument scrollbar — visible, quiet. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--foreground) / 0.25) transparent;
+  }
+
+  /* Calibrated underlines: tinted at rest, full ink on hover. No motion. */
+  .link-quiet {
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.16em;
+    text-decoration-color: hsl(var(--foreground) / 0.35);
+    transition: text-decoration-color 150ms var(--ease);
+  }
+  .link-quiet:hover {
+    text-decoration-color: currentColor;
+  }
+
+  /* Cap-height-true spacing against rules (progressive enhancement). */
+  @supports (text-box-trim: trim-both) {
+    .font-display {
+      text-box-trim: trim-both;
+      text-box-edge: cap alphabetic;
+    }
+  }
 }
 
 @layer utilities {
-  /* Financial figures: always tabular, always right-aligned in tables */
+  /* The complete numeric policy for data: lining, tabular, slashed zero,
+     case-sensitive punctuation, ligatures off so figure strings stay
+     glyph-stable. Never proportional figures on money. */
   .figure {
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "tnum" 1;
+    font-variant-numeric: lining-nums tabular-nums slashed-zero;
+    font-feature-settings: "kern" 1, "liga" 0, "case" 1, "zero" 1;
   }
-  /* 11px uppercase eyebrow used for table headers and section labels */
+  /* Old-style figures in running prose — the book-typography counterpart. */
+  .prose-figures {
+    font-variant-numeric: oldstyle-nums proportional-nums;
+  }
+  /* 11px uppercase instrument-voice label: mono, tracked, stable glyphs. */
   .eyebrow {
-    @apply text-[11px] font-medium uppercase text-muted-foreground;
-    letter-spacing: 0.07em;
+    @apply font-mono text-[11px] font-medium uppercase text-muted-foreground;
+    letter-spacing: 0.05em;
+    font-feature-settings: "case" 1, "zero" 1, "calt" 0;
   }
+  /* Display serif at full optical size — sharper cuts at hero scale. */
+  .display-opsz {
+    font-variation-settings: "opsz" 60;
+  }
+}
+
+/* Statement conventions (financial print): no vertical rules; single rule
+   above a total; double rule below a final total; units line in italic. */
+.statement-total td {
+  border-top: 1px solid hsl(var(--foreground) / 0.65);
+  border-bottom: 3px double hsl(var(--foreground) / 0.65);
+  font-weight: 600;
+}
+.units-line {
+  @apply font-display italic text-[13px] text-muted-foreground;
+}
+
+.doc-prose p {
+  max-width: 65ch;
+}
+.doc-prose code {
+  @apply font-mono text-[13px] bg-muted px-1 py-0.5 rounded-sm;
 }
 
 /* Statement rows settle in on load; the margin column resolves last. */

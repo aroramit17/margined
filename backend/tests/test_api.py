@@ -202,3 +202,94 @@ class TestIngest:
 
 def test_health():
     assert client.get("/health").json() == {"status": "ok"}
+
+
+# ── Billing / plan enforcement ─────────────────────────────────────────────
+
+from app.routes import billing as billing_module
+
+
+class TestPlanEnforcement:
+    def setup_method(self):
+        ingest_module._limit_cache.clear()
+
+    def test_under_limit_not_blocked(self, monkeypatch):
+        db = MagicMock()
+        db.rpc.return_value.execute.return_value.data = 50_000
+        monkeypatch.setattr(ingest_module, "get_db", lambda: db)
+        monkeypatch.setattr(ingest_module, "get_account", lambda uid: {"plan": "free"})
+        ingest_module._record_usage_and_check({"id": "p1", "user_id": "u1"}, 100)
+        assert ingest_module._project_over_limit("p1") is False
+
+    def test_over_limit_blocks(self, monkeypatch):
+        db = MagicMock()
+        db.rpc.return_value.execute.return_value.data = 100_001
+        monkeypatch.setattr(ingest_module, "get_db", lambda: db)
+        monkeypatch.setattr(ingest_module, "get_account", lambda uid: {"plan": "free"})
+        ingest_module._record_usage_and_check({"id": "p1", "user_id": "u1"}, 100)
+        assert ingest_module._project_over_limit("p1") is True
+
+    def test_growth_plan_unlimited(self, monkeypatch):
+        db = MagicMock()
+        db.rpc.return_value.execute.return_value.data = 50_000_000
+        monkeypatch.setattr(ingest_module, "get_db", lambda: db)
+        monkeypatch.setattr(ingest_module, "get_account", lambda uid: {"plan": "growth"})
+        ingest_module._record_usage_and_check({"id": "p1", "user_id": "u1"}, 100)
+        assert ingest_module._project_over_limit("p1") is False
+
+    def test_over_limit_ingest_drops_batch(self, mock_ingest_db, monkeypatch):
+        import time as time_module
+        ingest_module._limit_cache["proj-1"] = (time_module.monotonic(), True)
+        response = client.post("/ingest", json={"events": [VALID_EVENT]},
+                               headers={"Authorization": "Bearer mgd_good"})
+        assert response.status_code == 202
+        mock_ingest_db.table.assert_not_called()
+
+    def test_metering_failure_does_not_break_ingest(self, monkeypatch):
+        db = MagicMock()
+        db.rpc.side_effect = Exception("db down")
+        monkeypatch.setattr(ingest_module, "get_db", lambda: db)
+        ingest_module._record_usage_and_check({"id": "p1", "user_id": "u1"}, 100)
+        assert ingest_module._project_over_limit("p1") is False
+
+
+class TestBillingWebhook:
+    def test_checkout_completed_sets_plan(self, monkeypatch):
+        db = MagicMock()
+        monkeypatch.setattr(billing_module, "get_db", lambda: db)
+        event = {
+            "type": "checkout.session.completed",
+            "data": {"object": {
+                "client_reference_id": "user-1",
+                "customer": "cus_x",
+                "subscription": "sub_x",
+                "metadata": {"user_id": "user-1", "plan": "starter"},
+            }},
+        }
+        with patch("stripe.Webhook.construct_event", return_value=event):
+            response = client.post("/billing/webhook", content=b"{}",
+                                   headers={"stripe-signature": "sig"})
+        assert response.status_code == 200
+        upsert = db.table.return_value.upsert.call_args[0][0]
+        assert upsert["plan"] == "starter"
+        assert upsert["user_id"] == "user-1"
+
+    def test_subscription_deleted_downgrades(self, monkeypatch):
+        db = MagicMock()
+        monkeypatch.setattr(billing_module, "get_db", lambda: db)
+        event = {
+            "type": "customer.subscription.deleted",
+            "data": {"object": {"customer": "cus_x"}},
+        }
+        with patch("stripe.Webhook.construct_event", return_value=event):
+            response = client.post("/billing/webhook", content=b"{}",
+                                   headers={"stripe-signature": "sig"})
+        assert response.status_code == 200
+        update = db.table.return_value.update.call_args[0][0]
+        assert update["plan"] == "free"
+
+    def test_bad_signature_rejected(self):
+        with patch("stripe.Webhook.construct_event", side_effect=Exception("bad sig")):
+            response = client.post("/billing/webhook", content=b"{}",
+                                   headers={"stripe-signature": "bad"})
+        assert response.status_code == 400

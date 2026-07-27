@@ -4,7 +4,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routes import ingest, projects, customers, features, summary, calculator, alerts, stripe_routes
+from app.routes import (
+    alerts,
+    billing,
+    calculator,
+    customers,
+    features,
+    ingest,
+    projects,
+    stripe_routes,
+    summary,
+)
 
 
 @asynccontextmanager
@@ -38,6 +48,7 @@ app.include_router(summary.router, prefix="/projects", tags=["summary"])
 app.include_router(calculator.router, prefix="/projects", tags=["calculator"])
 app.include_router(alerts.router, prefix="/projects", tags=["alerts"])
 app.include_router(stripe_routes.router, prefix="/stripe", tags=["stripe"])
+app.include_router(billing.router, prefix="/billing", tags=["billing"])
 
 
 @app.get("/health")

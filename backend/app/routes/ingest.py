@@ -23,6 +23,7 @@ from app import pricing
 from app.auth import get_project_by_api_key
 from app.database import get_db
 from app.models.schemas import LLMEventIn
+from app.routes.billing import PLAN_LIMITS, get_account
 
 router = APIRouter()
 
@@ -68,6 +69,47 @@ def _project_for_key(api_key: str) -> dict | None:
     return project
 
 
+# ── Plan limit cache: project_id -> (checked_at, over_limit) ─────────
+_limit_lock = threading.Lock()
+_limit_cache: dict[str, tuple[float, bool]] = {}
+_LIMIT_TTL = 120.0
+
+
+def _month_key() -> str:
+    from datetime import date
+
+    return date.today().strftime("%Y-%m")
+
+
+def _record_usage_and_check(project: dict, count: int) -> None:
+    """Increment the monthly counter; cache over-limit state for the project.
+
+    Enforcement is post-insert with a short cache window, so a project can
+    overshoot by at most a couple of batches — acceptable for metering.
+    """
+    project_id = project["id"]
+    try:
+        db = get_db()
+        total = db.rpc(
+            "increment_usage",
+            {"p_project_id": project_id, "p_month": _month_key(), "p_count": count},
+        ).execute()
+        events_total = int(total.data) if total.data is not None else 0
+        plan = get_account(project["user_id"]).get("plan", "free")
+        limit = PLAN_LIMITS.get(plan)
+        over = limit is not None and events_total > limit
+        with _limit_lock:
+            _limit_cache[project_id] = (time.monotonic(), over)
+    except Exception:
+        pass  # metering must never break ingest
+
+
+def _project_over_limit(project_id: str) -> bool:
+    with _limit_lock:
+        hit = _limit_cache.get(project_id)
+    return bool(hit and time.monotonic() - hit[0] < _LIMIT_TTL and hit[1])
+
+
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
 @router.post("/", status_code=status.HTTP_202_ACCEPTED)
 async def ingest_events(request: Request):
@@ -85,6 +127,8 @@ async def ingest_events(request: Request):
     if not project:
         return accepted
     project_id = project["id"]
+    if _project_over_limit(project_id):
+        return accepted  # plan limit reached — events dropped until upgrade/reset
 
     body_bytes = await request.body()
     if len(body_bytes) > MAX_BODY_BYTES:
@@ -151,6 +195,7 @@ async def ingest_events(request: Request):
                 # Fallback for rows without event_id (older SDKs)
                 get_db().table("llm_events").insert(rows).execute()
             except Exception:
-                pass  # swallow — SDK must never break
+                return accepted  # swallow — SDK must never break
+        _record_usage_and_check(project, len(rows))
 
     return accepted
