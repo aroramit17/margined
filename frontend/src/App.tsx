@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { enterDemo } from "@/lib/demo";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Onboarding from "@/pages/Onboarding";
@@ -23,14 +24,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function Home() {
   const { user, loading, isDemo } = useAuth();
   if (loading) return <div className="flex h-screen items-center justify-center text-muted-foreground">Loading…</div>;
-  // Demo deployments keep the landing page reachable; real sessions skip it.
+  // Demo visitors keep the landing page reachable; real sessions skip it.
   return user && !isDemo ? <Navigate to="/dashboard" replace /> : <Landing />;
+}
+
+function EnterDemo() {
+  enterDemo();
+  return <Navigate to="/dashboard" replace />;
 }
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/demo" element={<EnterDemo />} />
       <Route path="/security" element={<Security />} />
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />

@@ -36,7 +36,7 @@ export default function Landing() {
               GitHub
             </a>
             <Link
-              to="/dashboard"
+              to="/demo"
               className="bg-primary text-primary-foreground px-3.5 py-1.5 rounded-md font-medium hover:opacity-90 active:scale-[0.96] transition-[opacity,scale]"
             >
               Open the demo
@@ -58,7 +58,7 @@ export default function Landing() {
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-5">
           <Link
-            to="/dashboard"
+            to="/demo"
             className="bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:opacity-90 active:scale-[0.96] transition-[opacity,scale]"
           >
             Explore the live demo
@@ -257,7 +257,7 @@ export default function Landing() {
             <a href="https://github.com/pushkalkumar/margined" className="hover:text-foreground transition-colors">
               GitHub
             </a>
-            <Link to="/dashboard" className="hover:text-foreground transition-colors">
+            <Link to="/demo" className="hover:text-foreground transition-colors">
               Live demo
             </Link>
             <Link to="/changelog" className="hover:text-foreground transition-colors">

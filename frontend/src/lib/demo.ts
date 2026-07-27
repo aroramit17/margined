@@ -16,8 +16,35 @@ import type {
   TrendResult,
 } from "./api";
 
-export const IS_DEMO =
-  import.meta.env.VITE_DEMO_MODE === "1" || !import.meta.env.VITE_SUPABASE_URL;
+const DEMO_FLAG = "margined-demo";
+
+/** Demo is active when no backend is configured, or the visitor entered
+ *  through /demo (session-scoped so real sign-ins are unaffected). */
+export function isDemoActive(): boolean {
+  if (import.meta.env.VITE_DEMO_MODE === "1") return true;
+  if (!import.meta.env.VITE_SUPABASE_URL) return true;
+  try {
+    return sessionStorage.getItem(DEMO_FLAG) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function enterDemo(): void {
+  try {
+    sessionStorage.setItem(DEMO_FLAG, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function exitDemo(): void {
+  try {
+    sessionStorage.removeItem(DEMO_FLAG);
+  } catch {
+    /* ignore */
+  }
+}
 
 // Mulberry32 — deterministic PRNG so the demo is identical on every load
 function mulberry32(seed: number) {

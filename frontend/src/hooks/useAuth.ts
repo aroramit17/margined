@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { IS_DEMO } from "@/lib/demo";
+import { exitDemo, isDemoActive } from "@/lib/demo";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
@@ -9,11 +9,12 @@ const DEMO_USER = {
 } as unknown as User;
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(IS_DEMO ? DEMO_USER : null);
-  const [loading, setLoading] = useState(!IS_DEMO);
+  const demo = isDemoActive();
+  const [user, setUser] = useState<User | null>(demo ? DEMO_USER : null);
+  const [loading, setLoading] = useState(!demo);
 
   useEffect(() => {
-    if (IS_DEMO) return;
+    if (demo) return;
 
     supabase.auth
       .getSession()
@@ -26,15 +27,16 @@ export function useAuth() {
     });
 
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [demo]);
 
   const signOut = () => {
-    if (IS_DEMO) {
+    if (demo) {
+      exitDemo();
       window.location.href = "/";
       return Promise.resolve({ error: null });
     }
     return supabase.auth.signOut();
   };
 
-  return { user, loading, signOut, isDemo: IS_DEMO };
+  return { user, loading, signOut, isDemo: demo };
 }

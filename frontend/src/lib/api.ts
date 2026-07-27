@@ -195,10 +195,24 @@ function buildDemoApi(): typeof realApi {
   };
 }
 
-const DEMO_ACTIVE =
-  import.meta.env.VITE_DEMO_MODE === "1" || !import.meta.env.VITE_SUPABASE_URL;
+import { isDemoActive } from "./demo";
 
-export const api = DEMO_ACTIVE ? buildDemoApi() : realApi;
+const demoApi = buildDemoApi();
+
+// Per-call delegation so one page load can serve both a real session and a
+// /demo visitor without a rebuild.
+function delegate(path: string[]): unknown {
+  return new Proxy(function () {} as unknown as object, {
+    get: (_target, prop: string) => delegate([...path, prop]),
+    apply: (_target, _thisArg, args: unknown[]) => {
+      let impl: unknown = isDemoActive() ? demoApi : realApi;
+      for (const key of path) impl = (impl as Record<string, unknown>)[key];
+      return (impl as (...a: unknown[]) => unknown)(...args);
+    },
+  });
+}
+
+export const api = delegate([]) as typeof realApi;
 
 // ── Types ──────────────────────────────────────────────────
 export type CustomerRow = {

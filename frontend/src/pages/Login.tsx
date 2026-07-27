@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { exitDemo } from "@/lib/demo";
 import { supabase } from "@/lib/supabase";
 
 export default function Login() {
@@ -19,10 +20,12 @@ export default function Login() {
       if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        exitDemo(); // a real session always wins over an earlier demo visit
         navigate("/dashboard");
       } else {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        exitDemo();
         navigate("/onboarding");
       }
     } catch (err: any) {
