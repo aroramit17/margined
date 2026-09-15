@@ -1,3 +1,4 @@
+import Brand from "@/components/Brand";
 import { Link } from "react-router-dom";
 
 const STATEMENT_ROWS = [
@@ -23,21 +24,21 @@ export default function Landing() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
       <header className="border-b">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <span className="font-display text-xl italic tracking-tight">Margined</span>
-          <nav className="flex items-center gap-6 text-[13px]">
-            <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
+          <Link to="/" aria-label="Capybara home"><Brand /></Link>
+          <nav className="flex items-center gap-3 sm:gap-6 text-[13px]">
+            <a href="#pricing" className="hidden sm:block text-muted-foreground hover:text-foreground transition-colors">
               Pricing
             </a>
             <a
-              href="https://github.com/pushkalkumar/margined"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              href="https://github.com/aroramit17/margined"
+              className="hidden sm:block text-muted-foreground hover:text-foreground transition-colors"
             >
               GitHub
             </a>
             <Link
               to="/demo"
-              className="bg-primary text-primary-foreground px-3.5 py-1.5 rounded-md font-medium hover:opacity-90 active:scale-[0.96] transition-[opacity,scale]"
+              className="whitespace-nowrap bg-primary text-primary-foreground px-3.5 py-1.5 rounded-md font-medium hover:opacity-90 active:scale-[0.96] transition-[opacity,scale]"
             >
               Open the demo
             </Link>
@@ -46,33 +47,29 @@ export default function Landing() {
       </header>
 
       {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 pt-20 pb-14">
-        <p className="eyebrow mb-5">Unit economics for AI SaaS</p>
-        <h1 className="font-display display-opsz text-[44px] sm:text-[60px] leading-[1.04] tracking-[-0.02em] font-medium max-w-[16ch]">
-          The P&L your LLM bill is&nbsp;hiding.
-        </h1>
-        <p className="mt-6 text-lg leading-relaxed text-muted-foreground max-w-xl">
-          Margined joins every model call with Stripe revenue: gross margin per
-          customer, cost per feature, and the price you should be charging. One
-          argument in your code.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center gap-5">
-          <Link
-            to="/demo"
-            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-md text-sm font-medium hover:opacity-90 active:scale-[0.96] transition-[opacity,scale]"
-          >
-            Explore the live demo
-          </Link>
-          <a
-            href="https://github.com/pushkalkumar/margined"
-            className="link-quiet text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Read the quickstart
-          </a>
+      <section className="max-w-5xl mx-auto px-6 pt-14 sm:pt-20 pb-16 grid md:grid-cols-[1.5fr_1fr] gap-10 items-center">
+        <div>
+          <p className="eyebrow mb-5">AI costs. Clear margins. A little more calm.</p>
+          <h1 className="font-brand text-[46px] sm:text-[64px] leading-[1.04] tracking-[-0.05em] font-semibold max-w-[14ch]">
+            Keep your AI margins <span className="text-primary">calm.</span>
+          </h1>
+          <p className="mt-6 text-lg leading-relaxed text-muted-foreground max-w-xl">
+            See what each customer costs, which features eat into profit, and where
+            your pricing needs attention. Capybara brings AI usage and revenue into one clear view.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-5">
+            <Link to="/demo" className="bg-primary text-primary-foreground px-5 py-3 rounded-full text-sm font-medium hover:opacity-90 transition-opacity">
+              Meet your margins <span aria-hidden="true">↗</span>
+            </Link>
+            <a href="#how-it-works" className="link-quiet text-sm text-muted-foreground hover:text-foreground">How it works</a>
+          </div>
+          <p className="mt-5 text-xs text-muted-foreground">Explore the demo with sample data. No account needed.</p>
         </div>
-        <p className="mt-6 font-mono text-[13px] text-muted-foreground">
-          pip install margined · free to 100K calls/mo · 5-minute setup
-        </p>
+        <div className="capybara-habitat relative rounded-[40%_40%_24%_24%] px-8 pt-6 pb-8 text-center max-w-[340px] w-full mx-auto">
+          <p className="eyebrow relative z-10">Your calm companion for AI costs</p>
+          <img src="/brand/capybara-mark.png" alt="A relaxed, warm-brown capybara sitting with a gentle smile" width="1280" height="1280" className="relative z-10 w-full h-auto mt-3" fetchPriority="high" />
+          <p className="relative z-10 font-brand text-sm font-semibold tracking-tight mt-2">Less guesswork. More breathing room.</p>
+        </div>
       </section>
 
       {/* Signature: the statement */}
@@ -80,8 +77,8 @@ export default function Landing() {
         <div className="bg-card border rounded-lg overflow-hidden">
           <div className="px-5 py-3 border-b">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="eyebrow">Briefly, Inc. — statement of AI unit economics</span>
-              <span className="eyebrow">July 2026 · prepared by Margined</span>
+              <span className="eyebrow">Sample data · AI customer economics</span>
+              <span className="eyebrow">Illustrative month · Capybara</span>
             </div>
             <p className="units-line mt-1">(in USD; margins as a percentage of MRR)</p>
           </div>
@@ -115,24 +112,24 @@ export default function Landing() {
               </tbody>
               <tfoot>
                 <tr className="statement-row statement-total h-[40px]" style={{ animationDelay: "680ms" }}>
-                  <td className="px-5">34 customers</td>
+                  <td className="px-5">6 sample customers</td>
                   <td className="px-3" />
-                  <td className="px-3 text-right figure">$3,858.00</td>
-                  <td className="px-3 text-right figure">$487.20</td>
-                  <td className="px-5 text-right figure">87.4%</td>
+                  <td className="px-3 text-right figure">$854.00</td>
+                  <td className="px-3 text-right figure">$175.51</td>
+                  <td className="px-5 text-right figure">79.4%</td>
                 </tr>
               </tfoot>
             </table>
           </div>
           <p className="px-5 py-3 border-t text-[13px] text-muted-foreground leading-relaxed">
             devon@solowork.co costs {usd(12.8)} more to serve each month than they pay.
-            Neither your provider dashboard nor Stripe will ever show you this line.
+            See the cost and revenue together to understand the difference.
           </p>
         </div>
       </section>
 
       {/* How it works — ledger entries */}
-      <section className="border-t">
+      <section id="how-it-works" className="border-t">
         <div className="max-w-5xl mx-auto px-6 py-20 grid md:grid-cols-[200px_1fr] gap-10">
           <p className="eyebrow md:pt-1">How it works</p>
           <div className="space-y-12 max-w-2xl">
@@ -152,12 +149,12 @@ export default function Landing() {
             <Step
               n="Entry 2"
               title="Connect Stripe"
-              body="A read-only connection maps your customers to their subscriptions. Margined normalizes every plan — monthly, yearly, seat-based — to MRR."
+              body="A read-only connection maps your customers to their subscriptions. Bring supported subscription revenue alongside AI usage costs."
             />
             <Step
               n="Entry 3"
-              title="Read the statement"
-              body="Margin per customer, cost per feature, cost per agent run. Costs are priced from a versioned table that knows what provider caches actually bill — cache reads at a tenth of input price, Anthropic cache writes at 1.25×."
+              title="Find your breathing room"
+              body="Margin per customer, cost per feature, cost per agent run. Explore the demo to see how usage becomes estimated costs and customer margins."
             />
           </div>
         </div>
@@ -212,10 +209,9 @@ export default function Landing() {
       <section className="border-t">
         <div className="max-w-5xl mx-auto px-6 py-16">
           <p className="max-w-2xl text-muted-foreground leading-relaxed">
-            <span className="text-foreground font-medium">Built for founders, not FinOps teams.</span>{" "}
-            Observability tools answer "why did this trace fail?" Margined answers
-            "am I making money on this customer?" — the question you actually ask
-            when the invoice doubles.
+            <span className="text-foreground font-medium">Built for founders building with AI.</span>{" "}
+            Capybara helps you answer "am I making money on this customer?"
+            with a clear view of revenue and estimated AI costs.
           </p>
         </div>
       </section>
@@ -223,7 +219,7 @@ export default function Landing() {
       {/* Pricing — rate card, not cards */}
       <section id="pricing" className="border-t">
         <div className="max-w-5xl mx-auto px-6 py-20">
-          <p className="eyebrow mb-3">Rate card</p>
+          <p className="eyebrow mb-3">Planned launch pricing</p>
           <h2 className="font-display text-3xl tracking-[-0.01em] font-medium mb-10">
             Pricing that would pass its own margin check.
           </h2>
@@ -232,29 +228,29 @@ export default function Landing() {
               <thead>
                 <tr className="border-b">
                   <th className="eyebrow text-left px-5 py-2.5 font-medium">Plan</th>
-                  <th className="eyebrow text-right px-3 py-2.5 font-medium">Per month</th>
-                  <th className="eyebrow text-right px-3 py-2.5 font-medium">Calls included</th>
+                  <th className="eyebrow text-right px-3 py-2.5 font-medium">One time</th>
+                  <th className="eyebrow text-right px-3 py-2.5 font-medium">Events / month</th>
                   <th className="eyebrow text-left px-5 py-2.5 font-medium">Includes</th>
                 </tr>
               </thead>
               <tbody>
-                <PriceRow name="Free" price="$0" calls="100K" includes="Cost per customer and feature, daily trend, 1 project" />
-                <PriceRow name="Starter" price="$49" calls="1M" includes="Stripe margin column, email alerts, 3 projects" strong />
-                <PriceRow name="Growth" price="$149" calls="Unlimited" includes="Pricing calculator, Slack alerts, API access, 5 seats" />
+                <PriceRow name="Tier 1" price="$49" calls="10,000" includes="Customer margins, feature costs, email alerts, 1 product" />
+                <PriceRow name="Tier 2" price="$59" calls="20,000" includes="Tier 1 + plan margins, pricing simulator, 3 products" strong />
+                <PriceRow name="Tier 3" price="$69" calls="30,000" includes="Tier 2 + forecasting, Slack alerts, 5 products" />
               </tbody>
             </table>
           </div>
           <p className="mt-4 text-[13px] text-muted-foreground">
-            The free tier is genuinely useful — most early AI SaaS runs under 100K calls a month.
+            Planned one-time launch offers. Paid checkout is not available yet; the demo uses sample data.
           </p>
         </div>
       </section>
 
       <footer className="border-t">
         <div className="max-w-5xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4 text-[13px] text-muted-foreground">
-          <span className="font-display italic text-base text-foreground">Margined</span>
+          <div><Brand /><p className="mt-2 text-xs">usecapybara.com</p></div>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <a href="https://github.com/pushkalkumar/margined" className="hover:text-foreground transition-colors">
+            <a href="https://github.com/aroramit17/margined" className="hover:text-foreground transition-colors">
               GitHub
             </a>
             <Link to="/demo" className="hover:text-foreground transition-colors">

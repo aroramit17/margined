@@ -2,7 +2,7 @@ import DocPage, { DocSection } from "./DocPage";
 
 export default function Privacy() {
   return (
-    <DocPage docNo="MG-003" title="Privacy policy" revised="2026-07-27">
+    <DocPage docNo="CP-003" title="Privacy policy" revised="2026-07-27">
       <DocSection heading="What we collect">
         <p>
           Account data: your email and authentication records. Service data: the usage
@@ -23,23 +23,22 @@ export default function Privacy() {
         <p>
           Supabase (database and authentication), Vercel (dashboard hosting), Railway
           (API hosting), Stripe (payments and, if you connect it, subscription reads),
-          Resend (email). Each processes data only as needed to run Margined.
+          Resend (email). Each processes data only as needed to run Capybara.
         </p>
       </DocSection>
       <DocSection heading="Your customers' data">
         <p>
           For customer identifiers inside usage events, you are the controller and
-          Margined is a processor acting on your instructions. Send pseudonymous IDs where
-          possible. A data processing agreement (DPA) is available on request for
-          customers subject to GDPR or similar regimes: privacy@trymargined.com.
+          Capybara is a processor acting on your instructions. Send pseudonymous IDs where
+          possible. Capybara privacy contact and data processing agreement details will
+          be published before launch.
         </p>
       </DocSection>
       <DocSection heading="Retention & deletion">
         <p>
           Event data is retained while your account is active. Deleting a project deletes
-          its events; deleting your account deletes everything within 30 days. You can
-          request export or deletion at privacy@trymargined.com and we will comply within
-          30 days.
+          its events; deleting your account deletes everything within 30 days. Capybara contact details for export and deletion requests will be published
+          before launch.
         </p>
       </DocSection>
       <DocSection heading="Where data lives">

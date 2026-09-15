@@ -2,17 +2,17 @@ import DocPage, { DocSection } from "./DocPage";
 
 export default function Terms() {
   return (
-    <DocPage docNo="MG-002" title="Terms of service" revised="2026-07-27">
+    <DocPage docNo="CP-002" title="Terms of service" revised="2026-07-27">
       <DocSection heading="Agreement">
         <p>
-          By creating an account or sending events to Margined you agree to these terms.
-          If you are using Margined on behalf of a company, you represent that you can
+          By creating an account or sending events to Capybara you agree to these terms.
+          If you are using Capybara on behalf of a company, you represent that you can
           bind that company.
         </p>
       </DocSection>
       <DocSection heading="The service">
         <p>
-          Margined ingests LLM usage events you send, joins them with billing data you
+          Capybara ingests LLM usage events you send, joins them with billing data you
           connect, and presents cost and margin analytics. Paid plans are billed monthly
           through Stripe; you can cancel any time from the customer portal and keep access
           through the end of the billing period. Plan limits (events per month) are
@@ -53,7 +53,7 @@ export default function Terms() {
         <p>
           We may update these terms; material changes will be announced by email at least
           14 days in advance. Continued use after the effective date constitutes
-          acceptance. Questions: legal@trymargined.com.
+          acceptance. Capybara legal contact details will be published before launch.
         </p>
       </DocSection>
     </DocPage>

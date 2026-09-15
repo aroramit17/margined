@@ -8,7 +8,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['"Newsreader"', "Georgia", "serif"],
+        brand: ['"Manrope"', "system-ui", "sans-serif"],
+        display: ['"Manrope"', "system-ui", "sans-serif"],
         sans: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
         mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
       },

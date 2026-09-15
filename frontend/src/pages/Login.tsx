@@ -1,3 +1,4 @@
+import Brand from "@/components/Brand";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { exitDemo } from "@/lib/demo";
@@ -69,9 +70,9 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm px-6">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight mb-1">Margined</h1>
+          <h1 className="mb-3"><Brand large /></h1>
           <p className="text-sm text-muted-foreground">
-            LLM unit economics for AI founders
+            A calmer view of your AI margins.
           </p>
         </div>
 

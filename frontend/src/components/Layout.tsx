@@ -1,3 +1,4 @@
+import Brand from "@/components/Brand";
 import { Outlet, Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Settings, LogOut, ChevronDown, Plus, TrendingUp, Sun, Moon } from "lucide-react";
@@ -33,7 +34,7 @@ export default function Layout() {
       {/* Sidebar */}
       <aside className="w-56 border-r flex flex-col bg-card">
         <div className="h-14 flex items-center gap-2 px-4 border-b">
-          <span className="font-semibold text-lg tracking-tight">Margined</span>
+          <Link to="/" aria-label="Capybara home"><Brand /></Link>
           {isDemo && (
             <span className="text-[10px] font-medium uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded">
               Demo

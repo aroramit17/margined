@@ -2,7 +2,7 @@ import DocPage, { DocSection } from "./DocPage";
 
 export default function Security() {
   return (
-    <DocPage docNo="MG-001" title="Security & data handling" revised="2026-07-27">
+    <DocPage docNo="CP-001" title="Security & data handling" revised="2026-07-27">
       <DocSection heading="What we receive">
         <p>
           The SDK sends usage metadata only: your customer ID, a feature name, the model
@@ -13,7 +13,7 @@ export default function Security() {
       </DocSection>
       <DocSection heading="Stripe access">
         <p>
-          Margined reads subscriptions only. Connect with a restricted, read-only key (or
+          Capybara reads subscriptions only. Connect with a restricted, read-only key (or
           Stripe Connect with the <code>read_only</code> scope). We store one number per
           customer — normalized monthly recurring revenue — plus the plan name. We cannot
           create charges, issue refunds, or see card details.
@@ -23,7 +23,7 @@ export default function Security() {
         <p>
           Tracking is fail-open by design: it never raises into your application, never
           blocks a request thread, bounds its memory at 10,000 queued events, and drops
-          data before it degrades your service. If Margined is down, your app is unaffected.
+          data before it degrades your service. If Capybara is down, your app is unaffected.
           Every event carries an idempotency key, so a retried delivery can never
           double-count your costs.
         </p>
@@ -47,8 +47,7 @@ export default function Security() {
         <p>
           Deleting a project deletes its events. Full account deletion and data export are
           available on request while self-serve tooling is built. Contact
-          security@trymargined.com — also the address for vulnerability reports; we respond
-          within 48 hours.
+          details for Capybara security and data requests will be published before launch.
         </p>
       </DocSection>
     </DocPage>

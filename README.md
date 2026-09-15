@@ -1,3 +1,5 @@
+> **Product identity: Capybara · usecapybara.com.** See [the brand guide](docs/BRAND.md) and preview the brand sheet at `/brand/index.html` in the frontend. Margined remains the upstream codebase and current SDK package identity.
+
 <div align="center">
 
 # Margined

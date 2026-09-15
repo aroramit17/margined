@@ -1,3 +1,4 @@
+import Brand from "@/components/Brand";
 import { Link } from "react-router-dom";
 
 /**
@@ -19,9 +20,7 @@ export default function DocPage({
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
         <div className="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="font-display text-xl italic tracking-tight">
-            Margined
-          </Link>
+          <Link to="/" aria-label="Capybara home"><Brand /></Link>
           <Link
             to="/"
             className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
@@ -33,7 +32,7 @@ export default function DocPage({
 
       <main className="max-w-3xl mx-auto px-6 py-14">
         <div className="flex flex-wrap justify-between gap-2 border-b pb-3 mb-10">
-          <span className="eyebrow">Margined · {docNo}</span>
+          <span className="eyebrow">Capybara · {docNo}</span>
           <span className="eyebrow">Revised {revised}</span>
         </div>
         <h1 className="font-display text-4xl tracking-[-0.01em] font-medium mb-10">{title}</h1>

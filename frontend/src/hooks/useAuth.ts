@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 
 const DEMO_USER = {
   id: "demo-user",
-  email: "demo@margined.dev",
+  email: "demo@usecapybara.com",
 } as unknown as User;
 
 export function useAuth() {

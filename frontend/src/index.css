@@ -2,34 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
- * Margined — "The Ledger"
- * Warm-paper canvas, ink text, hairline rules. One functional accent:
- * profit green — reserved for margin semantics, never decoration.
- */
+/* Capybara — warm oat, cocoa, and pond green. Keep financial status explicit. */
 
 @layer base {
   :root {
-    --background: 45 20% 96%;        /* #F7F6F3 warm paper */
-    --foreground: 45 10% 10%;        /* #1C1B17 warm ink */
+    --background: 42 48% 95%;        /* Oat #F8F4EB */
+    --foreground: 24 26% 17%;        /* Cocoa #37291F */
     --card: 0 0% 100%;
-    --card-foreground: 45 10% 10%;
+    --card-foreground: 24 26% 17%;
     --popover: 0 0% 100%;
-    --popover-foreground: 45 10% 10%;
-    --primary: 45 10% 10%;           /* ink CTAs (Vercel-style) */
-    --primary-foreground: 45 20% 98%;
-    --secondary: 45 18% 92%;
-    --secondary-foreground: 45 10% 16%;
-    --muted: 45 18% 92%;
-    --muted-foreground: 42 7% 40%;   /* #6E6A60 */
-    --accent: 45 18% 92%;
-    --accent-foreground: 45 10% 16%;
+    --popover-foreground: 24 26% 17%;
+    --primary: 159 28% 28%;           /* Pond #335B4D */
+    --primary-foreground: 42 48% 97%;
+    --secondary: 36 30% 89%;
+    --secondary-foreground: 24 26% 22%;
+    --muted: 36 30% 89%;
+    --muted-foreground: 25 12% 39%;   /* Warm, readable secondary text */
+    --accent: 36 30% 89%;
+    --accent-foreground: 24 26% 22%;
     --destructive: 8 51% 47%;        /* #B54A3A warm red */
-    --destructive-foreground: 45 20% 98%;
-    --border: 44 16% 87%;            /* #E3E0D8 hairline */
-    --input: 44 16% 84%;
+    --destructive-foreground: 42 48% 97%;
+    --border: 32 24% 83%;            /* #E3E0D8 hairline */
+    --input: 32 24% 77%;
     --ring: 155 63% 25%;             /* profit green focus ring */
-    --radius: 0.375rem;              /* 6px — sharp tool */
+    --radius: 0.875rem;              /* Soft, practical corners */
 
     --profit: 155 55% 30%;           /* #2F7D57-family */
     --loss: 8 51% 47%;
@@ -37,24 +33,24 @@
   }
 
   .dark {
-    --background: 45 11% 7%;         /* #141310 */
+    --background: 24 19% 9%;         /* #141310 */
     --foreground: 47 18% 91%;        /* #EDEBE4 */
-    --card: 45 10% 10%;
+    --card: 24 26% 17%;
     --card-foreground: 47 18% 91%;
-    --popover: 45 10% 10%;
+    --popover: 24 26% 17%;
     --popover-foreground: 47 18% 91%;
-    --primary: 47 18% 91%;
-    --primary-foreground: 45 11% 10%;
-    --secondary: 45 10% 14%;
+    --primary: 153 27% 71%;
+    --primary-foreground: 24 19% 12%;
+    --secondary: 24 15% 16%;
     --secondary-foreground: 47 18% 91%;
-    --muted: 45 10% 14%;
+    --muted: 24 15% 16%;
     --muted-foreground: 43 8% 60%;
-    --accent: 45 10% 14%;
+    --accent: 24 15% 16%;
     --accent-foreground: 47 18% 91%;
     --destructive: 8 55% 55%;
-    --destructive-foreground: 45 11% 7%;
-    --border: 45 11% 16%;
-    --input: 45 11% 18%;
+    --destructive-foreground: 24 19% 9%;
+    --border: 24 15% 23%;
+    --input: 24 15% 28%;
     --ring: 155 45% 45%;
 
     --profit: 155 42% 52%;
@@ -193,3 +189,20 @@
     animation: none;
   }
 }
+
+.capybara-habitat {
+  background: #E2EADD;
+  color: #335B4D;
+  isolation: isolate;
+}
+.capybara-habitat .eyebrow { color: #335B4D; font-size: 10px; }
+.capybara-habitat::after {
+  content: "";
+  position: absolute;
+  left: 12%; right: 12%; bottom: 18%; height: 12%;
+  border-radius: 50%;
+  background: #CAD9C6;
+}
+.dark .capybara-habitat { background: #283C31; color: #C3DCC4; }
+.dark .capybara-habitat .eyebrow { color: #C3DCC4; }
+.dark .capybara-habitat::after { background: #344D3E; }
