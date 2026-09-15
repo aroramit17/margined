@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "usecapybara",
+  "account_id": "1ee35fe4829d5ae2d62ea7ac3bcd15fd",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-09-15"
+}

@@ -35,3 +35,4 @@ sdk-node/dist/
 .vercel/
 .env.local
 *.setup-tmp
+.wrangler/
