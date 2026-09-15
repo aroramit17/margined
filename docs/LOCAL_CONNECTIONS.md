@@ -1,6 +1,6 @@
 # Capybara local connections
 
-The active application is this Margined fork. The older app at port 3000 is an archived prototype.
+The active application is this Margined fork. The older app at port 3000 is an archived prototype. Public frontend deployment is documented in [CLOUDFLARE_DEPLOYMENT.md](CLOUDFLARE_DEPLOYMENT.md); the public build serves the landing page and demo, while this local setup retains real beta sign-in.
 
 ## Current setup
 
@@ -49,6 +49,6 @@ All 78 checks passed: 56 backend/auth tests, 14 PostgreSQL integration tests, 6 
 
 The first owner signed in successfully with the chosen Google account. The dashboard displays the signed-in email and an empty project list. Authenticated `GET /projects` requests returned HTTP 200, and Supabase contains one linked `app_users` record. The Google/email login UI is verified; the email verification path has not been exercised end to end. The application remains in Clerk development mode; production domains and keys need configuration at launch.
 
-Still pending from the wider MVP: secure customer Stripe OAuth and account-scoped sync, automatic Stripe webhook handling, LTD checkout and entitlements, Edge rollup schedules, alerts, and public hosting. The old recurring Starter/Growth checkout prices are intentionally not configured because they differ from the LTD product.
+Still pending from the wider MVP: secure customer Stripe OAuth and account-scoped sync, automatic Stripe webhook handling, LTD checkout and entitlements, Edge rollup schedules, alerts, and public hosting for the authenticated backend. The old recurring Starter/Growth checkout prices are intentionally not configured because they differ from the LTD product.
 
 Existing frontend bundle-size warnings and the two inherited moderate React Router advisories remain. This app uses fixed internal redirect targets and no SSR hydration; the broader router upgrade is separate.

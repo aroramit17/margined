@@ -26,7 +26,7 @@ Spaceship remains the registrar for `usecapybara.com`. Cloudflare is the authori
 - `andy.ns.cloudflare.com`
 - `serena.ns.cloudflare.com`
 
-The registrar originally used `launch1.spaceship.net` and `launch2.spaceship.net`, with no custom DNS records or mail records. Cloudflare scanned two default parking A records (`54.149.79.189`, `34.216.117.25`); these must be replaced by the Pages custom-domain record when attaching the website.
+The registrar originally used `launch1.spaceship.net` and `launch2.spaceship.net`, with no custom DNS records or mail records. Cloudflare scanned two default parking A records (`54.149.79.189`, `34.216.117.25`); the Pages custom-domain setup replaced them with a proxied root CNAME to `usecapybara.pages.dev`. It also added a proxied `www` CNAME to the same target.
 
 Cloudflare DNSSEC was enabled before changing nameservers. Its DS record was preconfigured through Spaceship's custom-nameserver DS preparation flow, then activated with the nameserver change. The `.com` registry returned the new nameservers and DS record after the save:
 
@@ -34,8 +34,14 @@ Cloudflare DNSSEC was enabled before changing nameservers. Its DS record was pre
 usecapybara.com. IN DS 2371 13 2 B6D75D6BA5B74E1AFA514B1D496CCBB3D38C1CBB219F8AB1BAD5BEBFC4E75D25
 ```
 
-DNSSEC public digests are configuration, not credentials. Resolver caches can temporarily retain the old delegation. Verify the final website, TLS and DNSSEC after attaching the custom domains.
+DNSSEC public digests are configuration, not credentials. Both Cloudflare (1.1.1.1) and Google (8.8.8.8) returned the new delegation with the DNSSEC authenticated-data flag. Resolver caches elsewhere can temporarily retain the old delegation.
 
 ## Next deployment stage
 
 Real sign-in on the public domain requires a hosted backend, a Clerk production instance/domain, and matching backend issuer, origin and CORS configuration. Use a separate reviewed deployment for that stage. Do not point public traffic at the developer's loopback server.
+
+## Deployment verification
+
+The initial deployment is `2d1bcab3-f529-4cff-8f81-bcd1988ddd37`, built from frontend code preserved at commit `6442dfc`. Its immutable URL is https://2d1bcab3.usecapybara.pages.dev and the stable hosting URL is https://usecapybara.pages.dev.
+
+The production build and all 6 frontend authentication tests passed. Browser checks confirmed the landing page, loaded demo dashboard, pricing calculator and direct `/login` route. The public bundle was checked against local configured credential values; none are present. HTTP checks confirmed the Pages deployment and response headers. Cloudflare zone `44c334a697d441a6f88c1f026cd96ab4` is active. Both custom domains are active in the Pages API, including active ownership verification and certificate validation. HTTPS requests to `https://usecapybara.com/`, `https://www.usecapybara.com/` and the direct `/dashboard/demo/pricing` route returned HTTP 200. Chrome loaded the landing page on the custom root domain successfully. A Python urllib probe received HTTP 403 while Chrome and curl succeeded; no security settings were weakened to accommodate that probe.
