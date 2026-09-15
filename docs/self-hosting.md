@@ -2,6 +2,8 @@
 
 Margined runs on a Supabase project (Postgres + Auth + Edge Functions), a FastAPI backend, and a static React frontend. Everything is MIT-licensed.
 
+For the configured Capybara beta environment and exact local login URLs, see [Local connections](LOCAL_CONNECTIONS.md).
+
 ## 1. Supabase
 
 ```bash
@@ -52,6 +54,8 @@ Environment:
 A `Dockerfile` is included. PostgreSQL serializes ingestion per account across API workers. Authenticated ingestion is limited to 120 batches per UTC minute per account; ingress infrastructure should additionally limit unauthenticated traffic. API keys are checked against current database state rather than a process cache.
 
 ## 3. Frontend
+
+Use Node 20.19+ or 22.12+. Configure Supabase Auth with your frontend Site URL and an allowed `<frontend-origin>/auth/callback` redirect. Locally, both use `http://127.0.0.1:5173`. Email links use PKCE and must open in the requesting browser.
 
 ```bash
 cd frontend

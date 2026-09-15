@@ -2,7 +2,7 @@ import Brand from "@/components/Brand";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { exitDemo } from "@/lib/demo";
-import { supabase } from "@/lib/supabase";
+import { authConfigured, authRedirectUrl, supabase } from "@/lib/supabase";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ export default function Login() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [magicSent, setMagicSent] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,8 +24,14 @@ export default function Login() {
         exitDemo(); // a real session always wins over an earlier demo visit
         navigate("/dashboard");
       } else {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({
+          email, password, options: { emailRedirectTo: authRedirectUrl() },
+        });
         if (error) throw error;
+        if (!data.session) {
+          setEmailSent(true);
+          return;
+        }
         exitDemo();
         navigate("/onboarding");
       }
@@ -41,11 +47,14 @@ export default function Login() {
       setError("Enter your email first");
       return;
     }
+    setError("");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email });
+      const { error } = await supabase.auth.signInWithOtp({
+        email, options: { emailRedirectTo: authRedirectUrl() },
+      });
       if (error) throw error;
-      setMagicSent(true);
+      setEmailSent(true);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -53,14 +62,16 @@ export default function Login() {
     }
   }
 
-  if (magicSent) {
+  if (emailSent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="max-w-sm w-full px-6 text-center">
           <h2 className="text-xl font-semibold mb-2">Check your email</h2>
           <p className="text-muted-foreground text-sm">
-            We sent a magic link to <strong>{email}</strong>. Click it to sign in.
+            Check <strong>{email}</strong> for a sign-in or confirmation link.
+            Open it in this browser to finish signing in.
           </p>
+          <button onClick={() => setEmailSent(false)} className="mt-4 text-sm underline underline-offset-2">Back to sign in</button>
         </div>
       </div>
     );
@@ -78,8 +89,10 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1.5">Email</label>
+            <label htmlFor="email" className="block text-sm font-medium mb-1.5">Email</label>
             <input
+              id="email"
+              autoComplete="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -89,8 +102,10 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1.5">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium mb-1.5">Password</label>
             <input
+              id="password"
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -101,12 +116,13 @@ export default function Login() {
           </div>
 
           {error && (
-            <p className="text-destructive text-sm">{error}</p>
+            <p role="alert" className="text-destructive text-sm">{error}</p>
           )}
+          {!authConfigured && <p role="alert" className="text-sm text-muted-foreground">Login is awaiting Supabase configuration.</p>}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !authConfigured}
             className="w-full bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-opacity"
           >
             {loading ? "…" : mode === "login" ? "Sign in" : "Create account"}
@@ -116,7 +132,7 @@ export default function Login() {
         <div className="mt-3">
           <button
             onClick={handleMagicLink}
-            disabled={loading}
+            disabled={loading || !authConfigured}
             className="w-full border rounded-md px-4 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
           >
             Send magic link

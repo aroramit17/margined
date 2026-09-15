@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { enterDemo } from "@/lib/demo";
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
+import AuthCallback from "@/pages/AuthCallback";
 import Onboarding from "@/pages/Onboarding";
 import Dashboard from "@/pages/Dashboard";
 import CustomerDetail from "@/pages/CustomerDetail";
@@ -43,6 +44,7 @@ export default function App() {
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/changelog" element={<Changelog />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route
         path="/onboarding"
         element={

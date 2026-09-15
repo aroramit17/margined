@@ -34,3 +34,4 @@ sdk-node/dist/
 *.tgz
 .vercel/
 .env.local
+*.setup-tmp
