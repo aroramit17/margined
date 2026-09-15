@@ -15,7 +15,7 @@ npm run deploy:public
 
 `build:public` explicitly clears the Clerk publishable key and API URL and enables the sample-data demo before invoking Vite. These environment overrides prevent `.env.local` from leaking the local beta configuration into a public build. The usual `npm run dev` and `npm run build` still use the configured local Clerk integration.
 
-`wrangler.jsonc` records the account, Pages project and output directory. The Pages production branch is `codex/margined-audit`. Deployments use direct upload; pushing to GitHub preserves changes but does not deploy them automatically. Commit and push the reviewed source before deployment so Cloudflare's commit reference identifies the deployed code. No Cloudflare token or service credentials belong in Git.
+`wrangler.jsonc` records the Pages project and output directory. Confirm the account shown by `wrangler whoami` matches the account above; Pages does not support an `account_id` field in its config. The Pages production branch is `codex/margined-audit`. Deployments use direct upload; pushing to GitHub preserves changes but does not deploy them automatically. Commit and push the reviewed source before deployment so Cloudflare's commit reference identifies the deployed code. No Cloudflare token or service credentials belong in Git.
 
 Pages provides SPA fallback for React Router paths. `public/_headers` applies basic response headers and long-lived caching to hashed assets. The build contains no Pages Functions or backend secrets.
 
