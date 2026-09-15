@@ -28,6 +28,7 @@ supabase/.temp/
 .playwright-mcp/
 *.png
 !frontend/public/*.png
+!frontend/public/brand/*.png
 sdk/dist/
 sdk-node/dist/
 *.tgz
