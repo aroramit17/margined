@@ -274,6 +274,7 @@ export function demoCalculator(targetMargin: number): PricingResult {
       median_cogs: Math.round(medianCogs * 100) / 100,
       p90_calls: pick(calls, 90),
       p90_cogs: Math.round(p90Cogs * 100) / 100,
+      p99_calls: pick(calls, 99),
       p99_cogs: Math.round(p99Cogs * 100) / 100,
       break_even_price: Math.round(medianCogs * 100) / 100,
       recommended_price: Math.round(recommended * 100) / 100,

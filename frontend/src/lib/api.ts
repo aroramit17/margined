@@ -265,6 +265,7 @@ export type TierAnalysis = {
   median_cogs: number;
   p90_calls: number;
   p90_cogs: number;
+  p99_calls: number;
   p99_cogs: number;
   break_even_price: number;
   recommended_price: number;

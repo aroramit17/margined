@@ -20,7 +20,7 @@ export default function PricingCalculator() {
       <div>
         <h1 className="text-2xl font-bold mb-1">Pricing Calculator</h1>
         <p className="text-muted-foreground text-sm">
-          Based on your actual last-30-day usage — what do you need to charge to hit your margin target?
+          Use the last 30 days of usage to estimate what to charge to reach your margin target.
         </p>
       </div>
 
@@ -44,6 +44,20 @@ export default function PricingCalculator() {
           <span>70% (recommended)</span>
           <span>95%</span>
         </div>
+      </div>
+
+      <div className="rounded-xl border bg-card px-5 py-4 text-sm space-y-2">
+        <h2 className="font-medium">How to read usage and cost</h2>
+        <p className="text-muted-foreground">
+          Each figure is per customer, per month, based on the last 30 days.
+          Median is the midpoint: half of customers fall below it and half above.
+          P90 and P99 estimate the levels that 90% and 99% of customers fall at or below.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          API calls measure usage; cost (COGS) is the cost to serve that usage.
+          Calls and costs are ranked separately, so they may represent different customers.
+          With few customers, P90 and P99 can be the same.
+        </p>
       </div>
 
       {/* Tier results */}
@@ -94,28 +108,28 @@ function TierCard({ tier, targetMargin }: { tier: TierAnalysis; targetMargin: nu
 
       <div className="px-5 py-4 space-y-5">
         {/* Usage stats */}
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div>
-            <p className="text-xs text-muted-foreground mb-0.5">Median usage</p>
-            <p className="font-semibold">{formatNumber(tier.median_calls)} calls/mo</p>
-            <p className="text-xs text-muted-foreground">{formatCurrency(tier.median_cogs)} COGS</p>
+            <p className="text-xs text-muted-foreground mb-0.5">Typical usage (median)</p>
+            <p className="font-semibold">{formatNumber(tier.median_calls)} API calls/month</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(tier.median_cogs)}/month cost</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-0.5">P90 usage</p>
-            <p className="font-semibold">{formatNumber(tier.p90_calls)} calls/mo</p>
-            <p className="text-xs text-muted-foreground">{formatCurrency(tier.p90_cogs)} COGS</p>
+            <p className="text-xs text-muted-foreground mb-0.5">Heavy usage (P90)</p>
+            <p className="font-semibold">{formatNumber(tier.p90_calls)} API calls/month</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(tier.p90_cogs)}/month cost</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-0.5">P99 COGS</p>
-            <p className="font-semibold figure text-watch">{formatCurrency(tier.p99_cogs)}</p>
-            <p className="text-xs text-muted-foreground">heaviest users</p>
+            <p className="text-xs text-muted-foreground mb-0.5">Very heavy usage (P99)</p>
+            <p className="font-semibold">{formatNumber(tier.p99_calls)} API calls/month</p>
+            <p className="text-xs text-muted-foreground">{formatCurrency(tier.p99_cogs)}/month cost</p>
           </div>
         </div>
 
         {/* Price recommendation */}
         <div className="bg-muted/40 rounded-md px-4 py-3 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Break-even price (median COGS)</span>
+            <span className="text-sm text-muted-foreground">Break-even price (typical cost)</span>
             <span className="figure text-sm">{formatCurrency(tier.break_even_price)}/mo</span>
           </div>
           <div className="flex items-center justify-between">
@@ -134,17 +148,17 @@ function TierCard({ tier, targetMargin }: { tier: TierAnalysis; targetMargin: nu
             Margin at current price {tier.current_price ? `(${formatCurrency(tier.current_price)}/mo)` : ""}
           </p>
           <MarginRow
-            label="Median user"
+            label="Typical cost (median)"
             margin={tier.margin_at_median}
             targetMargin={targetMargin}
           />
           <MarginRow
-            label="P90 user"
+            label="High cost (P90)"
             margin={tier.margin_at_p90}
             targetMargin={targetMargin}
           />
           <MarginRow
-            label="P99 user"
+            label="Very high cost (P99)"
             margin={tier.margin_at_p99}
             targetMargin={targetMargin}
             highlight
@@ -157,8 +171,8 @@ function TierCard({ tier, targetMargin }: { tier: TierAnalysis; targetMargin: nu
             <AlertTriangle className="h-4 w-4 text-watch shrink-0 mt-0.5" />
             <p>
               Consider a usage cap at{" "}
-              <strong className="figure">{formatNumber(tier.usage_cap_recommendation)} calls/month</strong>{" "}
-              on this tier to protect against P99 margin bleed.
+              <strong className="figure">{formatNumber(tier.usage_cap_recommendation)} API calls/month</strong>{" "}
+              per customer on this tier to protect margins from very heavy usage.
             </p>
           </div>
         )}

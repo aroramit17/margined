@@ -115,6 +115,7 @@ def pricing_calculator(
         sorted_calls = sorted(calls)
         median_calls = statistics.median(sorted_calls) if calls else 0.0
         p90_calls = percentile(sorted_calls, 90)
+        p99_calls = percentile(sorted_calls, 99)
 
         # Break-even: the price at which the median customer's margin is 0 —
         # i.e. their COGS. Recommended: the price that hits the target margin.
@@ -140,6 +141,7 @@ def pricing_calculator(
             median_cogs=round(median_cogs, 4),
             p90_calls=round(p90_calls, 0),
             p90_cogs=round(p90_cogs, 4),
+            p99_calls=round(p99_calls, 0),
             p99_cogs=round(p99_cogs, 4),
             break_even_price=round(break_even, 2),
             recommended_price=round(recommended, 2),

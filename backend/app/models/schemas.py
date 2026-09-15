@@ -120,6 +120,7 @@ class TierAnalysis(BaseModel):
     median_cogs: float
     p90_calls: float
     p90_cogs: float
+    p99_calls: float
     p99_cogs: float
     break_even_price: float
     recommended_price: float
