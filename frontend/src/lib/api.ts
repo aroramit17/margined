@@ -1,10 +1,9 @@
-import { supabase } from "./supabase";
+import { getSessionToken } from "./auth-token";
 
 const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
+  const token = await getSessionToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

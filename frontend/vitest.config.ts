@@ -5,5 +5,5 @@ import path from "node:path";
 export default defineConfig({
   plugins: [react()],
   resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
-  test: { env: { VITE_SUPABASE_URL: "https://test.supabase.co", VITE_SUPABASE_ANON_KEY: "test-public-key" }, environment: "jsdom", include: ["tests/**/*.test.tsx"] },
+  test: { env: { VITE_CLERK_PUBLISHABLE_KEY: "pk_test_dGVzdC5jbGVyay5hY2NvdW50cy5kZXYk" }, environment: "jsdom", include: ["tests/**/*.test.tsx"] },
 });

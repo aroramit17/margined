@@ -1,44 +1,57 @@
-"""Auth helpers — validate Supabase JWT and project API keys."""
+"""Auth helpers — verify Clerk sessions and retain project API-key access."""
 
 from typing import Optional
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-import httpx
+from functools import lru_cache
+import re
+import jwt
 from app.config import settings
 from app.database import get_db
 
 bearer = HTTPBearer()
 
 
+@lru_cache(maxsize=4)
+def _jwks_client(issuer: str):
+    return jwt.PyJWKClient(f"{issuer}/.well-known/jwks.json", lifespan=300, timeout=10)
+
+
+def verify_clerk_token(token: str) -> dict:
+    issuer = settings.clerk_issuer_url.rstrip("/")
+    parties = settings.clerk_authorized_parties_list
+    if not issuer.startswith("https://") or not parties:
+        raise HTTPException(status_code=503, detail="Clerk authentication not configured")
+    try:
+        if jwt.get_unverified_header(token).get("alg") != "RS256":
+            raise jwt.InvalidAlgorithmError("Expected RS256")
+        key = _jwks_client(issuer).get_signing_key_from_jwt(token).key
+        claims = jwt.decode(token, key, algorithms=["RS256"], issuer=issuer, leeway=5,
+            options={"require": ["exp", "nbf", "iat", "iss", "sub", "sid", "azp"], "verify_aud": False})
+        if (claims["azp"] not in parties or claims.get("sts") not in (None, "active")
+            or not isinstance(claims["sub"], str) or not re.fullmatch(r"user_[A-Za-z0-9]+", claims["sub"])
+            or not isinstance(claims["sid"], str) or not claims["sid"].startswith("sess_")):
+            raise jwt.InvalidTokenError("Invalid session claims")
+        return claims
+    except jwt.PyJWKClientConnectionError:
+        raise HTTPException(status_code=503, detail="Authentication service unavailable") from None
+    except (jwt.PyJWTError, ValueError, TypeError):
+        raise HTTPException(status_code=401, detail="Invalid token") from None
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(bearer),
 ) -> dict:
-    """Validate a Supabase JWT and return the user payload."""
-    if not settings.supabase_url or not settings.supabase_anon_key:
-        raise HTTPException(status_code=503, detail="Authentication not configured")
+    """Verify the Clerk session, then resolve its stable internal owner UUID."""
+    claims = verify_clerk_token(credentials.credentials)
     try:
-        # The retained supabase-py 2.9 DB client only accepts JWT-shaped API
-        # keys. Auth's /user endpoint supports both new publishable and legacy
-        # anon keys, and verifies the user's token with the issuing project.
-        response = httpx.get(
-            f"{settings.supabase_url.rstrip('/')}/auth/v1/user",
-            headers={"apikey": settings.supabase_anon_key,
-                     "Authorization": f"Bearer {credentials.credentials}"},
-            timeout=10.0,
-            follow_redirects=False,
-        )
-        if response.status_code in (401, 403):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        response.raise_for_status()
-        user = response.json()
-        if not isinstance(user, dict) or not isinstance(user.get("id"), str) or not user["id"]:
-            raise ValueError("Missing authenticated user")
-        return {"id": user["id"], "email": user.get("email")}
-    except HTTPException:
-        raise
-    except (httpx.HTTPError, ValueError, TypeError):
-        raise HTTPException(status_code=503, detail="Authentication service unavailable") from None
+        owner = get_db().rpc("resolve_clerk_user", {"p_clerk_user_id": claims["sub"]}).execute().data
+        if not isinstance(owner, dict) or not owner.get("id") or owner.get("clerk_user_id") != claims["sub"]:
+            raise ValueError("Invalid identity mapping")
+        return {"id": owner["id"], "clerk_user_id": claims["sub"], "email": None}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Account storage unavailable") from None
 
 
 def get_project_by_api_key(api_key: str) -> Optional[dict]:

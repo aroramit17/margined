@@ -10,6 +10,13 @@ class Settings(BaseSettings):
     supabase_service_role_key: str = ""
     supabase_anon_key: str = ""
 
+    clerk_issuer_url: str = ""
+    clerk_authorized_parties: str = "http://127.0.0.1:5173"
+
+    @property
+    def clerk_authorized_parties_list(self) -> list[str]:
+        return [origin.strip() for origin in self.clerk_authorized_parties.split(",") if origin.strip()]
+
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_billing_webhook_secret: str = ""

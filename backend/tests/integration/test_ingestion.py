@@ -55,7 +55,7 @@ def db(request):
                 conn.execute("INSERT INTO llm_events(project_id,event_id,customer_id,feature,model,provider,input_tokens,output_tokens,cost_usd,occurred_at) VALUES (%s,'legacy-event','customer','chat','gpt-4.1','openai',100,50,.0006,now())", (projects[0],))
             conn.execute(path.read_text())
         for uid in users:
-            conn.execute("INSERT INTO auth.users VALUES (%s) ON CONFLICT DO NOTHING", (uid,))
+            conn.execute("INSERT INTO public.app_users(id) VALUES (%s) ON CONFLICT DO NOTHING", (uid,))
         for pid, uid, key in zip(projects, [users[0], users[0], users[1]], ["key-a", "key-b", "key-c"]):
             conn.execute("INSERT INTO projects(id,user_id,name,api_key) VALUES (%s,%s,'test',%s) ON CONFLICT DO NOTHING", (pid, uid, key))
         yield SimpleNamespace(conn=conn, users=users, projects=projects)
@@ -166,14 +166,37 @@ def test_browser_roles_cannot_execute_privileged_rpcs_or_change_projects(db):
             conn.execute("SELECT increment_usage(%s,'2026-09',-999)", (db.projects[0],))
 
 
-def test_owner_rls_hides_other_accounts(db):
+def test_legacy_browser_tokens_cannot_read_application_data(db):
+    import psycopg
     ingest("key-a", [event()]); ingest("key-c", [event()])
-    with connect() as conn:
-        conn.execute("SET ROLE authenticated")
-        conn.execute("SELECT set_config('request.jwt.claim.sub',%s,false)", (str(db.users[0]),))
-        assert conn.execute("SELECT count(*) FROM projects").fetchone()[0] == 2
-        assert conn.execute("SELECT count(*) FROM llm_events").fetchone()[0] == 1
-        assert conn.execute("SELECT user_id FROM account_usage_counters").fetchall() == [(db.users[0],)]
+    for role in ("anon", "authenticated"):
+        with connect() as conn:
+            conn.execute(f"SET ROLE {role}")
+            conn.execute("SELECT set_config('request.jwt.claim.sub',%s,false)", (str(db.users[0]),))
+            for table in ("projects", "llm_events", "account_usage_counters", "app_users"):
+                with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                    conn.execute(f"SELECT * FROM {table}")
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                conn.execute("SELECT resolve_clerk_user('user_attacker')")
+
+
+def test_clerk_identity_is_stable_concurrent_and_isolated(db):
+    def resolve(subject):
+        with connect() as conn:
+            conn.execute("SET ROLE service_role")
+            return conn.execute("SELECT resolve_clerk_user(%s)", (subject,)).fetchone()[0]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        identities = list(pool.map(lambda _: resolve('user_alpha'), range(12)))
+    assert len({item['id'] for item in identities}) == 1
+    other = resolve('user_beta')
+    assert other['id'] != identities[0]['id']
+    assert db.conn.execute("SELECT count(*) FROM app_users WHERE clerk_user_id='user_alpha'").fetchone()[0] == 1
+    uid = identities[0]['id']
+    db.conn.execute("INSERT INTO projects(user_id,name,api_key) VALUES (%s,'clerk','clerk-key')", (uid,))
+    assert ingest('clerk-key',[event()])['accepted'] == 1
+    status = db.conn.execute("SELECT account_usage_status(%s)", (uid,)).fetchone()[0]
+    assert status['events_used'] == 1
+    assert db.conn.execute("SELECT count(*) FROM auth.users WHERE id=%s", (uid,)).fetchone()[0] == 0
 
 
 def test_http_to_real_postgres_transaction(db, monkeypatch):

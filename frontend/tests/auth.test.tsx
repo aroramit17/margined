@@ -1,88 +1,49 @@
-import { StrictMode } from "react";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
-
-const auth = vi.hoisted(() => ({
-  signUp: vi.fn(), signInWithPassword: vi.fn(), signInWithOtp: vi.fn(),
-  exchangeCodeForSession: vi.fn(),
+import { StrictMode } from 'react';
+import { cleanup, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+const state = vi.hoisted(() => ({user:null as any, loaded:true, getToken:vi.fn(), signOut:vi.fn()}));
+vi.mock('@clerk/react', () => ({
+  ClerkProvider: ({children}:any) => children,
+  useUser: () => ({isLoaded:state.loaded,user:state.user}),
+  useAuth: () => ({isSignedIn:Boolean(state.user),getToken:state.getToken}),
+  useClerk: () => ({signOut:state.signOut}),
+  SignIn: () => <p>Clerk sign-in</p>, SignUp: () => <p>Clerk sign-up</p>,
 }));
-const exitDemo = vi.hoisted(() => vi.fn());
-vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ auth }) }));
-vi.mock("@/lib/demo", () => ({ exitDemo }));
-import Login from "../src/pages/Login";
-import AuthCallback from "../src/pages/AuthCallback";
+import AuthProvider from '../src/components/AuthProvider';
+import Login from '../src/pages/Login';
+import { getSessionToken } from '../src/lib/auth-token';
+import { api } from '../src/lib/api';
+import { enterDemo, isDemoActive } from '../src/lib/demo';
 
-function page(path = "/login") {
-  window.history.replaceState(null, "", path);
-  return render(<StrictMode><MemoryRouter initialEntries={[path]}><Routes>
-    <Route path="/login" element={<Login />} />
-    <Route path="/auth/callback" element={<AuthCallback />} />
-    <Route path="/dashboard" element={<p>Dashboard reached</p>} />
-    <Route path="/onboarding" element={<p>Onboarding reached</p>} />
-  </Routes></MemoryRouter></StrictMode>);
+function view(path='/login', client=new QueryClient()) {
+  return <StrictMode><QueryClientProvider client={client}><AuthProvider><MemoryRouter initialEntries={[path]}><Routes>
+    <Route path='/login/*' element={<Login />} />
+    <Route path='/signup/*' element={<Login signup />} />
+    <Route path='/dashboard' element={<p>Dashboard reached</p>} />
+  </Routes></MemoryRouter></AuthProvider></QueryClientProvider></StrictMode>;
 }
-
-beforeEach(() => { vi.clearAllMocks(); });
-afterEach(cleanup);
-
-describe("login", () => {
-  it("waits for email confirmation instead of entering protected onboarding", async () => {
-    auth.signUp.mockResolvedValue({ data: { session: null }, error: null });
-    page();
-    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "owner@example.com" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "test-password" } });
-    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-    await screen.findByText("Check your email");
-    expect(screen.queryByText("Onboarding reached")).toBeNull();
-    expect(exitDemo).not.toHaveBeenCalled();
-    expect(auth.signUp.mock.calls[0][0].options.emailRedirectTo).toBe(`${window.location.origin}/auth/callback`);
-  });
-
-  it("passes the allowed callback URL when requesting an email link", async () => {
-    auth.signInWithOtp.mockResolvedValue({ error: null });
-    page();
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "owner@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: "Send magic link" }));
-    await screen.findByText("Check your email");
-    expect(auth.signInWithOtp).toHaveBeenCalledWith({ email: "owner@example.com", options: { emailRedirectTo: `${window.location.origin}/auth/callback` } });
-  });
-
-  it("keeps failed password sign-in out of the dashboard", async () => {
-    auth.signInWithPassword.mockResolvedValue({ error: new Error("Invalid login credentials") });
-    page();
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "owner@example.com" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "wrong-password" } });
-    fireEvent.click(screen.getByRole("button", { name: "Sign in", exact: true }));
-    expect((await screen.findByRole("alert")).textContent).toContain("Invalid login credentials");
-    expect(screen.queryByText("Dashboard reached")).toBeNull();
-  });
+beforeEach(()=>{state.user=null;state.loaded=true;vi.clearAllMocks();sessionStorage.clear();});
+afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+it('shows Clerk sign-in for signed-out users',()=>{render(view());expect(screen.getByText('Clerk sign-in')).toBeTruthy();});
+it('supports nested signup verification routes',()=>{render(view('/signup/verify-email-address'));expect(screen.getByText('Clerk sign-up')).toBeTruthy();});
+it('does not show protected content while Clerk is loading',()=>{state.loaded=false;render(view());expect(screen.getByRole('status').textContent).toContain('Loading');expect(screen.queryByText('Dashboard reached')).toBeNull();});
+it('exits demo and retrieves a fresh token for each API call',async()=>{
+  enterDemo();state.user={id:'user_a',primaryEmailAddress:{emailAddress:'a@example.com'}};
+  state.getToken.mockResolvedValueOnce('session-one').mockResolvedValueOnce('session-two');
+  const fetcher=vi.fn().mockResolvedValue({ok:true,status:200,json:async()=>[]});vi.stubGlobal('fetch',fetcher);
+  render(view());expect(await screen.findByText('Dashboard reached')).toBeTruthy();expect(isDemoActive()).toBe(false);
+  await api.projects.list();await api.projects.list();
+  expect(fetcher.mock.calls[0][1].headers.Authorization).toBe('Bearer session-one');
+  expect(fetcher.mock.calls[1][1].headers.Authorization).toBe('Bearer session-two');
 });
-
-describe("email callback", () => {
-  it("exchanges a one-time code once under StrictMode and exits demo only with a session", async () => {
-    auth.exchangeCodeForSession.mockResolvedValue({ data: { session: { user: { id: "owner" } } }, error: null });
-    page("/auth/callback?code=success-code");
-    await screen.findByText("Dashboard reached");
-    expect(auth.exchangeCodeForSession).toHaveBeenCalledTimes(1);
-    expect(exitDemo).toHaveBeenCalledTimes(1);
-    expect(window.location.search).toBe("");
-  });
-
-  it("rejects expired codes without establishing a session", async () => {
-    auth.exchangeCodeForSession.mockResolvedValue({ data: { session: null }, error: new Error("expired") });
-    page("/auth/callback?code=expired-code");
-    await screen.findByRole("alert");
-    expect(exitDemo).not.toHaveBeenCalled();
-    expect(screen.queryByText("Dashboard reached")).toBeNull();
-  });
-
-  it("does not exchange provider errors or missing codes", async () => {
-    page("/auth/callback?error=access_denied&error_description=untrusted");
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("expired"));
-    expect(auth.exchangeCodeForSession).not.toHaveBeenCalled();
-    expect(window.location.search).toBe("");
-    expect(screen.queryByText("untrusted")).toBeNull();
-  });
+it('clears cached customer data when the signed-in identity changes',()=>{
+  const client=new QueryClient();state.user={id:'user_a'};const ui=render(view('/login',client));
+  client.setQueryData(['projects'],[{name:'private A'}]);state.user={id:'user_b'};ui.rerender(view('/login',client));
+  expect(client.getQueryData(['projects'])).toBeUndefined();
+});
+it('clears the token getter when the auth provider unmounts',async()=>{
+  state.user={id:'user_a'};state.getToken.mockResolvedValue('session-one');const ui=render(view());
+  expect(await getSessionToken()).toBe('session-one');ui.unmount();expect(await getSessionToken()).toBeNull();
 });

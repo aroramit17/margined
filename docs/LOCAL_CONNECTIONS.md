@@ -1,20 +1,18 @@
 # Capybara local connections
 
-The active application is the Margined fork in this directory. The older app at port 3000 is an archived prototype.
+The active application is this Margined fork. The older app at port 3000 is an archived prototype.
 
-## Configured September 14, 2026
+## Current setup
 
-- Supabase project: **inferlytic-beta**, organization **pdf-rag**, reference `wonrumlzqohwjkvcolld`.
-- Migrations `001`–`004` applied as one transaction through the Supabase SQL Editor and recorded in `supabase_migrations.schema_migrations`. Verified all ten public application tables have RLS enabled. Migration history also has RLS enabled and no anon/authenticated access.
-- Supabase Auth Site URL: `http://127.0.0.1:5173`.
-- Allowed email redirect: `http://127.0.0.1:5173/auth/callback`.
-- Email/password and email-link login use the real project. Email confirmation remains enabled. PKCE links must open in the same browser and origin that requested them.
-- Stripe: the existing **SecureWebPay** account, `acct_1EUIbUFWefDVPYNO`, **test mode**. The backend successfully authenticated to Stripe using its existing test key.
-- Local credentials: `frontend/.env.local` and `backend/.env`, both mode `0600` and ignored by Git. The backend uses an existing legacy Supabase service-role key; the new secret-key reveal control did not return a usable key during setup. The retained database client requires the legacy service-role format. No keys were created or rotated.
+- **Clerk login:** Capybara development application `app_3JLjRALL0piAQbJaRqKFHKshC5y`, instance `ins_3JLjR5SvpXEzm3JRc4obDDPOOHr`, in the owner's existing Clerk account. [Open Clerk](https://dashboard.clerk.com/apps/app_3JLjRALL0piAQbJaRqKFHKshC5y/instances/ins_3JLjR5SvpXEzm3JRc4obDDPOOHr).
+- **Issuer:** `https://enhanced-coyote-2985.clerk.accounts.dev`. The login UI offers Google and email sign-in. This supersedes the previous Supabase email-link setup.
+- **Database:** Supabase **inferlytic-beta**, organization **pdf-rag**, reference `wonrumlzqohwjkvcolld`. Migrations `001`–`005` applied and recorded. Clerk subjects map to internal UUIDs in `app_users`; existing project and usage UUIDs are preserved. Legacy browser database access is revoked. All application tables have RLS enabled.
+- **Stripe:** Existing **SecureWebPay** account `acct_1EUIbUFWefDVPYNO`, **test mode**. Its API connection was verified in the preceding setup checkpoint.
+- **Local files:** `frontend/.env.local` contains only frontend configuration and the Clerk publishable key. `backend/.env` contains Supabase/Stripe secrets and Clerk issuer configuration. Both are mode `0600` and ignored by Git. The retained database client uses a legacy Supabase service-role key.
 
 ## Run locally
 
-Use Node 20.19+ or 22.12+ for the frontend toolchain. In separate terminals, from this checkout:
+Use Node 20.19+ or 22.12+. From this checkout, use separate terminals:
 
 ```sh
 cd frontend
@@ -27,36 +25,30 @@ cd backend
 ../.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open `http://127.0.0.1:5173/login`. Use this exact host rather than `localhost` so the browser's PKCE verifier and email redirect share an origin. Vite forwards `/api` to the backend. The fixed port prevents a silently changed login callback.
+Open `http://127.0.0.1:5173/login`. Vite forwards `/api` to the backend. Keep this exact origin in `CLERK_AUTHORIZED_PARTIES`; adding another frontend host requires updating that allowlist. If dependency updates leave Vite's optimized imports stale, restart with `npm run dev -- --force`.
 
-An email confirmation does not enter protected onboarding until a session exists. The callback exchanges each code once, including under React StrictMode; expired or invalid links return to login with an error. Demo mode exits only after successful authentication.
+Clerk handles sign-in, sign-up, verification and sign-out. API requests obtain a fresh Clerk session token. The backend verifies RS256, the exact issuer, expiry/not-before/issued-at times, a session ID, a Clerk user subject, an allowed origin and non-pending status. It atomically provisions the internal identity on first authenticated access. User data is never joined by email. Changing signed-in users clears cached dashboard data. Supabase auth tokens no longer authenticate to the API.
 
-## Set up another machine
+## Another machine
 
-Copy the example environment files and supply that machine's credentials locally. For entering existing keys without putting them in shell history, the optional helper serves a temporary form on loopback:
+Copy the example environment files and configure the same application and issuer. Clerk CLI can link the repository and pull development keys:
 
 ```sh
-python3 scripts/local_setup.py --project-ref YOUR_PROJECT_REF --public-key YOUR_PUBLIC_KEY
+npx -y clerk@latest auth login
+npx -y clerk@latest link --app app_3JLjRALL0piAQbJaRqKFHKshC5y
+npx -y clerk@latest env pull --app app_3JLjRALL0piAQbJaRqKFHKshC5y --instance dev --file .env.local
 ```
 
-Open its printed URL, submit the existing legacy Supabase service-role key and Stripe **test** key, then stop it with Ctrl-C. It uses an unguessable URL, validates Host and POST Origin, writes credentials atomically with owner-only permissions, and returns no credential values. It never accepts live Stripe keys. Its SQL bundle is only for a fresh, empty database: it does not execute SQL or support upgrading an existing project. For ongoing migrations, use the Supabase CLI.
+Run the env pull inside `frontend`. The CLI also writes `CLERK_SECRET_KEY`: move that line to `backend/.env` if needed for administration, or remove it from the frontend file. Runtime JWT verification only needs the public issuer/JWKS. Never use a `VITE_` prefix for secret keys. Local CLI project links live in Clerk's local configuration, not Git. `clerk doctor` confirms the application is linked and reachable. Its missing frontend secret warning is expected: server secrets belong in the backend only.
 
-## Scope still pending
+The optional `scripts/local_setup.py` helper remains available for entering existing Supabase service-role and Stripe test keys without shell-history exposure. Stop its loopback server after use. Its generated SQL bundle is for a fresh database only; use individual migrations/CLI for upgrades.
 
-This checkpoint connects local authentication, the database, and the Stripe test API. It does not deploy a public app or enable live payments.
+## Validation and remaining setup
 
-- Complete an actual owner's email/password or email-link sign-in to verify the hosted mail delivery path. Supabase's default sender may require custom SMTP for addresses outside the organization.
-- The upstream Stripe Connect handler still lacks a secure OAuth callback and account-scoped subscription sync. `STRIPE_CLIENT_ID` remains unset until that implementation is ready.
-- Customer and billing webhook listeners are not configured yet. No automatic Stripe event sync is claimed.
-- The upstream Starter/Growth recurring checkout does not match Capybara's LTD tiers. No checkout prices were configured or products created for those old plans. LTD checkout and entitlement enforcement remain a separate product change.
-- Edge rollups, scheduled alerts, production hosting, and production auth redirect URLs remain pending.
+All 78 checks passed: 56 backend/auth tests, 14 PostgreSQL integration tests, 6 frontend auth tests and 2 local setup tests. These cover invalid signatures, issuer/origin mismatches, expired/future tokens, missing claims, pending sessions, rejected legacy browser access, concurrent identity provisioning, preserved usage, per-request tokens and cache isolation. The TypeScript production build passes.
 
-## Verification
+The first owner signed in successfully with the chosen Google account. The dashboard displays the signed-in email and an empty project list. Authenticated `GET /projects` requests returned HTTP 200, and Supabase contains one linked `app_users` record. The Google/email login UI is verified; the email verification path has not been exercised end to end. The application remains in Clerk development mode; production domains and keys need configuration at launch.
 
-- Backend token validation calls the issuing Supabase project’s Auth API directly, supporting new publishable keys without upgrading the retained database client. Network outages return a retryable service error.
-- Eleven backend auth tests pass; the combined backend suite passes 49 tests.
-- Six frontend tests cover confirmation-required signup, email redirect URLs, rejected password login, one-time callback exchange under StrictMode, expired links, and provider errors.
-- Two local setup tests cover preserving other environment settings, private file permissions, and migration transaction/history generation.
-- Frontend TypeScript and production build pass. Existing bundle-size warnings remain.
-- Hosted checks: database connection succeeds; migrations and RLS verified in SQL Editor; Supabase Auth settings return email enabled and confirmations required; Stripe account retrieval succeeds in test mode.
-- The Vite/React test toolchain was updated for the authentication tests. `npm audit` still reports two inherited moderate React Router advisories requiring a major router upgrade; this app uses fixed internal navigation targets and no SSR hydration. That broader upgrade is not included here.
+Still pending from the wider MVP: secure customer Stripe OAuth and account-scoped sync, automatic Stripe webhook handling, LTD checkout and entitlements, Edge rollup schedules, alerts, and public hosting. The old recurring Starter/Growth checkout prices are intentionally not configured because they differ from the LTD product.
+
+Existing frontend bundle-size warnings and the two inherited moderate React Router advisories remain. This app uses fixed internal redirect targets and no SSR hydration; the broader router upgrade is separate.

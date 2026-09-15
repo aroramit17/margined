@@ -1,6 +1,6 @@
 # Self-hosting
 
-Margined runs on a Supabase project (Postgres + Auth + Edge Functions), a FastAPI backend, and a static React frontend. Everything is MIT-licensed.
+Margined runs on a Supabase project (Postgres + Edge Functions), Clerk (Auth), a FastAPI backend, and a static React frontend. The application code is MIT-licensed.
 
 For the configured Capybara beta environment and exact local login URLs, see [Local connections](LOCAL_CONNECTIONS.md).
 
@@ -8,7 +8,7 @@ For the configured Capybara beta environment and exact local login URLs, see [Lo
 
 ```bash
 supabase start                # or create a hosted project
-supabase db push              # applies migrations 001–004; see coordinated rollout below
+supabase db push              # applies migrations 001–005; see coordinated rollout below
 supabase functions deploy hourly-rollup
 supabase functions deploy daily-alerts
 ```
@@ -44,7 +44,8 @@ Environment:
 |---|---|---|
 | `SUPABASE_URL` | ✅ | Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Server-side DB access (ingest, rollup reads) |
-| `SUPABASE_ANON_KEY` | ✅ | JWT validation for dashboard endpoints |
+| `CLERK_ISSUER_URL` | ✅ | Exact Clerk issuer; its public JWKS verifies session signatures |
+| `CLERK_AUTHORIZED_PARTIES` | ✅ | Comma-separated allowed frontend origins for session tokens |
 | `STRIPE_SECRET_KEY` | — | MRR sync |
 | `STRIPE_WEBHOOK_SECRET` | — | Webhook signature verification |
 | `STRIPE_CLIENT_ID` | — | Stripe Connect OAuth |
@@ -55,11 +56,11 @@ A `Dockerfile` is included. PostgreSQL serializes ingestion per account across A
 
 ## 3. Frontend
 
-Use Node 20.19+ or 22.12+. Configure Supabase Auth with your frontend Site URL and an allowed `<frontend-origin>/auth/callback` redirect. Locally, both use `http://127.0.0.1:5173`. Email links use PKCE and must open in the requesting browser.
+Use Node 20.19+ or 22.12+. Create a Clerk application and configure `VITE_CLERK_PUBLISHABLE_KEY`. Locally, use `http://127.0.0.1:5173`, also listed in the backend’s `CLERK_AUTHORIZED_PARTIES`. Clerk handles `/login/*` and `/signup/*`. See [Clerk migration](CLERK_MIGRATION.md) before upgrading from Supabase Auth.
 
 ```bash
 cd frontend
-cp .env.example .env    # VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
+cp .env.example .env    # VITE_CLERK_PUBLISHABLE_KEY, VITE_API_URL
 npm install && npm run build
 ```
 

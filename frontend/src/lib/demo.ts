@@ -1,7 +1,7 @@
 /**
  * Demo mode: a fully explorable dashboard with a deterministic seeded
  * dataset — no backend, no auth. Active when VITE_DEMO_MODE=1 or when no
- * Supabase project is configured (e.g. the public deployment).
+ * Clerk application is configured (e.g. the public deployment).
  */
 
 import type {
@@ -22,7 +22,7 @@ const DEMO_FLAG = "margined-demo";
  *  through /demo (session-scoped so real sign-ins are unaffected). */
 export function isDemoActive(): boolean {
   if (import.meta.env.VITE_DEMO_MODE === "1") return true;
-  if (!import.meta.env.VITE_SUPABASE_URL) return true;
+  if (!import.meta.env.VITE_CLERK_PUBLISHABLE_KEY) return true;
   try {
     return sessionStorage.getItem(DEMO_FLAG) === "1";
   } catch {
