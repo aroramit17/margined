@@ -51,33 +51,13 @@ def get_account(user_id: str) -> dict:
 @router.get("/status")
 def billing_status(user: User):
     """Current plan, limit, and month-to-date event usage across projects."""
-    account = get_account(user["id"])
-    db = get_db()
-    from datetime import date
-
-    month = date.today().strftime("%Y-%m")
-    used = 0
     try:
-        projects = db.table("projects").select("id").eq("user_id", user["id"]).execute()
-        ids = [p["id"] for p in (projects.data or [])]
-        if ids:
-            counters = (
-                db.table("usage_counters")
-                .select("events")
-                .in_("project_id", ids)
-                .eq("month", month)
-                .execute()
-            )
-            used = sum(int(c["events"]) for c in (counters.data or []))
+        result = get_db().rpc("account_usage_status", {"p_user_id": user["id"]}).execute().data
+        if not isinstance(result, dict):
+            raise ValueError("Missing usage status")
+        return result
     except Exception:
-        pass
-    plan = account.get("plan", "free")
-    return {
-        "plan": plan,
-        "events_used": used,
-        "events_limit": PLAN_LIMITS.get(plan),
-        "month": month,
-    }
+        raise HTTPException(status_code=503, detail="Usage status unavailable") from None
 
 
 @router.post("/checkout")

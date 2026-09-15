@@ -403,3 +403,41 @@ class TestTransport:
             transport.enqueue({"i": i})
         assert len(transport._queue) == _transport._MAX_QUEUE
         assert transport._dropped == 500
+
+
+@pytest.mark.parametrize("status", [429, 503])
+def test_transport_honors_retry_after_with_stable_event_id(status):
+    transport = TestTransport().make_transport()
+    transport.enqueue({"event_id": "stable-id"})
+    transport._client.post.side_effect = [
+        MagicMock(status_code=status, headers={"retry-after":"10"}),
+        MagicMock(status_code=202),
+    ]
+    with patch.object(_transport.time, "time", return_value=100):
+        transport.flush(); transport.flush()
+        assert transport._client.post.call_count == 1
+    with patch.object(_transport.time, "time", return_value=111):
+        transport.flush()
+    assert transport._client.post.call_count == 2
+    for call in transport._client.post.call_args_list:
+        assert call.kwargs["json"]["events"][0]["event_id"] == "stable-id"
+    assert len(transport._queue) == 0
+
+
+def test_long_retry_after_does_not_block_shutdown():
+    transport = TestTransport().make_transport()
+    transport.enqueue({"event_id":"stable-id"})
+    transport._client.post.return_value = MagicMock(status_code=429, headers={"retry-after":"86400"})
+    transport.flush()
+    transport.shutdown()
+    assert transport._client.post.call_count == 1
+
+
+def test_retryable_http_failure_without_retry_after_uses_backoff():
+    transport = TestTransport().make_transport()
+    transport.enqueue({"event_id":"stable-id"})
+    transport._client.post.side_effect = [MagicMock(status_code=503, headers={}), MagicMock(status_code=202)]
+    with patch.object(_transport.time, "sleep") as sleep:
+        transport.flush()
+    sleep.assert_called_once()
+    assert transport._client.post.call_count == 2

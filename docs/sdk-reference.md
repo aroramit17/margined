@@ -69,7 +69,7 @@ margined.PRICES          # the bundled price table (USD per token)
 margined.PRICES_VERSION  # date string, e.g. "2026-07-27"
 ```
 
-Model resolution tolerates dated snapshots (`claude-haiku-4-5-20251001`), provider prefixes (`anthropic.claude-opus-5`, `openai/gpt-4o`), and prefers the longest prefix match (`gpt-4o-mini-...` never matches `gpt-4o`). Unknown models get a mid-tier estimate client-side; the server re-prices once the model is in its table.
+Model resolution tolerates dated snapshots (`claude-haiku-4-5-20251001`), provider prefixes (`anthropic.claude-opus-5`, `openai/gpt-4o`), and prefers the longest prefix match (`gpt-4o-mini-...` never matches `gpt-4o`). Unknown models still get a mid-tier estimate client-side, but ingestion rejects them with 422 until a verified server price exists. Do not treat that client fallback as a recorded cost.
 
 ## Delivery semantics
 
@@ -80,9 +80,10 @@ Model resolution tolerates dated snapshots (`claude-haiku-4-5-20251001`), provid
 | Batch size | 100 events per request |
 | Retry | 3 attempts, exponential backoff + jitter; failed batches requeue once |
 | Queue bound | 10,000 events; oldest dropped under backpressure (drop count reported) |
-| 4xx from ingest | Dropped without retry (retrying can't help) |
-| Idempotency | Every event has a UUID `event_id`; ingest dedupes on it |
-| Exit | atexit hook drains with a single best-effort attempt per batch |
+| 408 / 429 / 5xx | Retry with bounded backoff; honor Retry-After without blocking flush |
+| Other 4xx from ingest | Entire batch rejected, diagnostic emitted, no retry |
+| Idempotency | Every event has a stable `event_id`; transactional receipts prevent duplicate usage counting, including after raw-event pruning |
+| Exit | Best-effort drain; an active Retry-After cooldown is respected and queued data is not durable |
 
 ## Event schema
 

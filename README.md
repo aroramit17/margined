@@ -2,6 +2,8 @@
 
 # Margined
 
+Fork status: the first ingestion hardening pass is implemented locally. See [rollout and validation](docs/INGESTION_HARDENING.md) before deploying migration 004. Stripe Connect and the remaining MVP work are still pending.
+
 **The unit economics layer for AI SaaS — gross margin per customer, cost per feature, and the price you need to charge.**
 
 [![PyPI](https://img.shields.io/pypi/v/margined?color=blue)](https://pypi.org/project/margined/)

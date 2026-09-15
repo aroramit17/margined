@@ -1,6 +1,7 @@
 """Backend unit tests — pure logic + ingest endpoint with mocked DB."""
 
 from unittest.mock import MagicMock, patch
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -108,149 +109,122 @@ VALID_EVENT = {
     "input_tokens": 1000,
     "output_tokens": 500,
     "cost_usd": 999.0,  # bogus client cost — server must recompute
-    "occurred_at": "2026-07-27T12:00:00Z",
+    "occurred_at": datetime.now(timezone.utc).isoformat(),
 }
 
 
 @pytest.fixture
 def mock_ingest_db(monkeypatch):
-    """Patch project lookup + DB; return the mock table for inspection."""
-    ingest_module._key_cache.clear()
-    ingest_module._rate_windows.clear()
-    monkeypatch.setattr(
-        ingest_module, "get_project_by_api_key", lambda key: {"id": "proj-1"} if key == "mgd_good" else None
-    )
     db = MagicMock()
+    db.rpc.return_value.execute.return_value.data = {
+        "status": "ok", "accepted": 1, "duplicates": 0,
+        "events_used": 1, "events_limit": 100000, "month": "2026-09",
+    }
     monkeypatch.setattr(ingest_module, "get_db", lambda: db)
     return db
 
 
+def post_events(events, **kwargs):
+    return client.post("/ingest", json={"events": events},
+                       headers={"Authorization": "Bearer mgd_good"}, **kwargs)
+
+
 class TestIngest:
-    def test_valid_batch_inserts_with_recomputed_cost(self, mock_ingest_db):
-        response = client.post(
-            "/ingest",
-            json={"events": [VALID_EVENT]},
-            headers={"Authorization": "Bearer mgd_good"},
-        )
-        assert response.status_code == 202
-        upsert_args = mock_ingest_db.table.return_value.upsert.call_args
-        rows = upsert_args[0][0]
-        assert len(rows) == 1
-        # server-side price wins over the bogus client cost
-        expected = 1000 * 3e-6 + 500 * 15e-6
-        assert float(rows[0]["cost_usd"]) == pytest.approx(expected)
-        assert rows[0]["event_id"] == "evt_abc"
-        assert upsert_args[1]["on_conflict"] == "project_id,event_id"
-
-    def test_unknown_model_keeps_client_cost(self, mock_ingest_db):
-        event = {**VALID_EVENT, "model": "mystery-model", "cost_usd": 0.123}
-        client.post("/ingest", json={"events": [event]},
-                    headers={"Authorization": "Bearer mgd_good"})
-        rows = mock_ingest_db.table.return_value.upsert.call_args[0][0]
-        assert float(rows[0]["cost_usd"]) == pytest.approx(0.123)
-
-    def test_bad_api_key_returns_202_no_insert(self, mock_ingest_db):
-        response = client.post("/ingest", json={"events": [VALID_EVENT]},
-                               headers={"Authorization": "Bearer mgd_bad"})
-        assert response.status_code == 202
+    def test_valid_batch_is_server_priced_and_acknowledged(self, mock_ingest_db):
+        response = post_events([VALID_EVENT])
+        assert response.status_code == 202 and response.json()["accepted"] == 1
+        name, args = mock_ingest_db.rpc.call_args.args
+        assert name == "ingest_event_batch"
+        assert args["p_api_key"] == "mgd_good"
+        assert float(args["p_events"][0]["cost_usd"]) == pytest.approx(0.0105)
+        assert args["p_events"][0]["event_id"] == "evt_abc"
         mock_ingest_db.table.assert_not_called()
 
-    def test_missing_auth_returns_202(self, mock_ingest_db):
-        assert client.post("/ingest", json={"events": [VALID_EVENT]}).status_code == 202
+    def test_unknown_model_rejected_without_client_cost_fallback(self, mock_ingest_db):
+        assert post_events([{**VALID_EVENT, "model": "mystery", "cost_usd": .123}]).status_code == 422
+        mock_ingest_db.rpc.assert_not_called()
+
+    def test_invalid_key_is_401(self, mock_ingest_db):
+        mock_ingest_db.rpc.return_value.execute.return_value.data = {"status": "invalid_key"}
+        assert post_events([VALID_EVENT]).status_code == 401
+
+    def test_missing_auth_is_401(self, mock_ingest_db):
+        assert client.post("/ingest", json={"events": [VALID_EVENT]}).status_code == 401
+        mock_ingest_db.rpc.assert_not_called()
+
+    @pytest.mark.parametrize("bad", [{"customer_id": "private customer"}, None, 4,
+                                      {**VALID_EVENT, "event_id": ""},
+                                      {**VALID_EVENT, "event_id": None}])
+    def test_invalid_batch_does_not_partially_write(self, mock_ingest_db, bad):
+        response = post_events([VALID_EVENT, bad])
+        assert response.status_code == 422
+        assert "private customer" not in response.text
+        mock_ingest_db.rpc.assert_not_called()
+
+    def test_stable_event_id_is_required(self, mock_ingest_db):
+        event = {k: v for k, v in VALID_EVENT.items() if k != "event_id"}
+        assert post_events([event]).status_code == 422
+        mock_ingest_db.rpc.assert_not_called()
+
+    def test_single_event_body_still_supported(self, mock_ingest_db):
+        assert client.post("/ingest", json=VALID_EVENT, headers={"Authorization":"Bearer mgd_good"}).status_code == 202
+
+    def test_oversized_batch_is_rejected_not_truncated(self, mock_ingest_db):
+        assert post_events([VALID_EVENT] * 101).status_code == 422
+        mock_ingest_db.rpc.assert_not_called()
+
+    def test_streamed_body_limit(self, mock_ingest_db):
+        response = client.post("/ingest", content=b"x" * (ingest_module.MAX_BODY_BYTES + 1),
+                               headers={"Authorization":"Bearer mgd_good", "Content-Length":"1"})
+        assert response.status_code == 413
+        mock_ingest_db.rpc.assert_not_called()
+
+    def test_malformed_json_is_400(self, mock_ingest_db):
+        response = client.post("/ingest", content=b"not json", headers={"Authorization":"Bearer mgd_good"})
+        assert response.status_code == 400
+
+    def test_db_failure_is_retryable_and_hides_details(self, mock_ingest_db):
+        mock_ingest_db.rpc.side_effect = Exception("private database detail")
+        response = post_events([VALID_EVENT])
+        assert response.status_code == 503 and response.headers["retry-after"] == "5"
+        assert "private" not in response.text
         mock_ingest_db.table.assert_not_called()
 
-    def test_invalid_events_skipped(self, mock_ingest_db):
-        bad = {"customer_id": "u"}  # missing everything
-        client.post("/ingest", json={"events": [bad, VALID_EVENT]},
-                    headers={"Authorization": "Bearer mgd_good"})
-        rows = mock_ingest_db.table.return_value.upsert.call_args[0][0]
-        assert len(rows) == 1
+    @pytest.mark.parametrize("status", ["quota_exceeded", "rate_limited"])
+    def test_database_limit_returns_retry_after(self, mock_ingest_db, status):
+        mock_ingest_db.rpc.return_value.execute.return_value.data = {"status":status, "retry_after":60, "accepted":0}
+        response = post_events([VALID_EVENT])
+        assert response.status_code == 429 and response.headers["retry-after"] == "60"
+        assert response.json()["accepted"] == 0
 
-    def test_single_event_body_accepted(self, mock_ingest_db):
-        client.post("/ingest", json=VALID_EVENT,
-                    headers={"Authorization": "Bearer mgd_good"})
-        rows = mock_ingest_db.table.return_value.upsert.call_args[0][0]
-        assert rows[0]["customer_id"] == "user_1"
+    @pytest.mark.parametrize("timestamp", ["2000-01-01T00:00:00Z", "2099-01-01T00:00:00Z", "2026-09-14T12:00:00"])
+    def test_timestamp_requires_timezone_and_supported_window(self, mock_ingest_db, timestamp):
+        assert post_events([{**VALID_EVENT, "occurred_at": timestamp}]).status_code == 422
+        mock_ingest_db.rpc.assert_not_called()
 
-    def test_batch_capped_at_100(self, mock_ingest_db):
-        events = [{**VALID_EVENT, "event_id": f"evt_{i}"} for i in range(150)]
-        client.post("/ingest", json={"events": events},
-                    headers={"Authorization": "Bearer mgd_good"})
-        rows = mock_ingest_db.table.return_value.upsert.call_args[0][0]
-        assert len(rows) == 100
+    def test_missing_rpc_result_fails_closed(self, mock_ingest_db):
+        mock_ingest_db.rpc.return_value.execute.return_value.data = None
+        assert post_events([VALID_EVENT]).status_code == 503
 
-    def test_rate_limit_kicks_in(self, mock_ingest_db):
-        for _ in range(ingest_module._RATE_LIMIT):
-            assert not ingest_module._rate_limited("key-x")
-        assert ingest_module._rate_limited("key-x")
-
-    def test_malformed_json_returns_202(self, mock_ingest_db):
-        response = client.post("/ingest", content=b"not json",
-                               headers={"Authorization": "Bearer mgd_good",
-                                        "Content-Type": "application/json"})
-        assert response.status_code == 202
-
-    def test_db_failure_still_202(self, mock_ingest_db):
-        mock_ingest_db.table.return_value.upsert.side_effect = Exception("db down")
-        mock_ingest_db.table.return_value.insert.side_effect = Exception("db down")
-        response = client.post("/ingest", json={"events": [VALID_EVENT]},
-                               headers={"Authorization": "Bearer mgd_good"})
-        assert response.status_code == 202
-
-
-# ── Health ─────────────────────────────────────────────────────────────────
 
 def test_health():
     assert client.get("/health").json() == {"status": "ok"}
 
 
-# ── Billing / plan enforcement ─────────────────────────────────────────────
-
 from app.routes import billing as billing_module
 
 
-class TestPlanEnforcement:
-    def setup_method(self):
-        ingest_module._limit_cache.clear()
-
-    def test_under_limit_not_blocked(self, monkeypatch):
-        db = MagicMock()
-        db.rpc.return_value.execute.return_value.data = 50_000
-        monkeypatch.setattr(ingest_module, "get_db", lambda: db)
-        monkeypatch.setattr(ingest_module, "get_account", lambda uid: {"plan": "free"})
-        ingest_module._record_usage_and_check({"id": "p1", "user_id": "u1"}, 100)
-        assert ingest_module._project_over_limit("p1") is False
-
-    def test_over_limit_blocks(self, monkeypatch):
-        db = MagicMock()
-        db.rpc.return_value.execute.return_value.data = 100_001
-        monkeypatch.setattr(ingest_module, "get_db", lambda: db)
-        monkeypatch.setattr(ingest_module, "get_account", lambda uid: {"plan": "free"})
-        ingest_module._record_usage_and_check({"id": "p1", "user_id": "u1"}, 100)
-        assert ingest_module._project_over_limit("p1") is True
-
-    def test_growth_plan_unlimited(self, monkeypatch):
-        db = MagicMock()
-        db.rpc.return_value.execute.return_value.data = 50_000_000
-        monkeypatch.setattr(ingest_module, "get_db", lambda: db)
-        monkeypatch.setattr(ingest_module, "get_account", lambda uid: {"plan": "growth"})
-        ingest_module._record_usage_and_check({"id": "p1", "user_id": "u1"}, 100)
-        assert ingest_module._project_over_limit("p1") is False
-
-    def test_over_limit_ingest_drops_batch(self, mock_ingest_db, monkeypatch):
-        import time as time_module
-        ingest_module._limit_cache["proj-1"] = (time_module.monotonic(), True)
-        response = client.post("/ingest", json={"events": [VALID_EVENT]},
-                               headers={"Authorization": "Bearer mgd_good"})
-        assert response.status_code == 202
-        mock_ingest_db.table.assert_not_called()
-
-    def test_metering_failure_does_not_break_ingest(self, monkeypatch):
-        db = MagicMock()
-        db.rpc.side_effect = Exception("db down")
-        monkeypatch.setattr(ingest_module, "get_db", lambda: db)
-        ingest_module._record_usage_and_check({"id": "p1", "user_id": "u1"}, 100)
-        assert ingest_module._project_over_limit("p1") is False
+def test_billing_status_uses_authoritative_account_counter(monkeypatch):
+    db = MagicMock()
+    db.rpc.return_value.execute.return_value.data = {"plan":"free", "events_used":42, "events_limit":100000}
+    monkeypatch.setattr(billing_module, "get_db", lambda: db)
+    assert billing_module.billing_status({"id":"owner"})["events_used"] == 42
+    db.rpc.assert_called_once_with("account_usage_status", {"p_user_id":"owner"})
+    db.rpc.side_effect = Exception("offline")
+    from fastapi import HTTPException
+    with pytest.raises(HTTPException) as exc:
+        billing_module.billing_status({"id":"owner"})
+    assert exc.value.status_code == 503
 
 
 class TestBillingWebhook:

@@ -4,6 +4,8 @@
  * Triggered by Supabase cron: "0 9 * * *" (daily at 9am UTC)
  */
 
+import { withCronAuth } from "../_shared/cron-auth.ts";
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabase = createClient(
@@ -66,7 +68,7 @@ async function deliver(alert: AlertConfig, subject: string, message: string) {
   }
 }
 
-Deno.serve(async (_req) => {
+Deno.serve(withCronAuth(async (_req) => {
   const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const daysElapsed = today.getDate();
@@ -178,4 +180,4 @@ Deno.serve(async (_req) => {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
-});
+}));

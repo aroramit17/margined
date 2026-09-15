@@ -15,7 +15,7 @@ class LLMEventIn(BaseModel):
     customer_id: str = Field(min_length=1, max_length=512)
     feature: str = Field(min_length=1, max_length=512)
     run_id: Optional[str] = Field(default=None, max_length=128)
-    event_id: Optional[str] = Field(default=None, max_length=64)
+    event_id: str = Field(min_length=1, max_length=64)
     model: str = Field(min_length=1, max_length=512)
     provider: str = Field(default="unknown", max_length=64)
     input_tokens: int = Field(ge=0, le=100_000_000)

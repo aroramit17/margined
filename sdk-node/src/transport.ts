@@ -19,6 +19,7 @@ export class Transport {
   private flushing: Promise<void> | null = null;
   private stopped = false;
   private draining = false;
+  private retryAt = 0;
 
   constructor(
     readonly apiKey: string,
@@ -44,6 +45,7 @@ export class Transport {
   /** Drain the queue. Concurrent calls coalesce onto one in-flight drain. */
   flush(): Promise<void> {
     if (this.flushing) return this.flushing;
+    if (Date.now() < this.retryAt) return Promise.resolve();
     this.flushing = this.drain().finally(() => {
       this.flushing = null;
     });
@@ -77,12 +79,21 @@ export class Transport {
           },
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout(TIMEOUT_MS),
+          redirect: "error",
         });
-        if (response.status < 500) {
-          if (this.debug && response.status >= 400) {
-            console.warn(`margined: ingest rejected batch (${response.status})`);
+        const retryable = response.status >= 500 || response.status === 429 || response.status === 408;
+        if (!retryable) {
+          if (response.status < 200 || response.status >= 300) {
+            this.dropped += batch.length;
+            console.warn(`margined: ingest rejected ${batch.length} events (${response.status}); check the key and event fields`);
           }
-          return true; // 2xx accepted; 4xx won't improve on retry — drop
+          return true;
+        }
+        const retryAfter = retryDelay(response.headers.get("retry-after"));
+        if (retryAfter > 0) {
+          // Defer without sleeping in the request/flush path, including long quotas.
+          this.retryAt = Date.now() + retryAfter;
+          break;
         }
       } catch (error) {
         if (this.debug) console.warn(`margined: flush attempt ${attempt + 1} failed`, error);
@@ -121,4 +132,10 @@ export class Transport {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryDelay(value: string | null): number {
+  if (!value) return 0;
+  const seconds = /^\d+$/.test(value) ? Number(value) : (Date.parse(value) - Date.now()) / 1000;
+  return Number.isFinite(seconds) ? Math.max(0, Math.min(seconds, 32 * 86400)) * 1000 : 0;
 }

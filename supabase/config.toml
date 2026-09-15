@@ -32,6 +32,8 @@ enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
 
+# Gateway JWT checks are disabled because these jobs use a dedicated CRON_SECRET.
+# Both entrypoints must be wrapped in withCronAuth before any service-role work.
 [functions.hourly-rollup]
 verify_jwt = false
 

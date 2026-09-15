@@ -1,0 +1,7 @@
+{
+  "compilerOptions": { "lib": ["deno.ns", "deno.window", "dom", "esnext"] },
+  "tasks": {
+    "test": "deno test --allow-read _shared/cron-auth_test.ts",
+    "check": "deno check hourly-rollup/index.ts daily-alerts/index.ts"
+  }
+}

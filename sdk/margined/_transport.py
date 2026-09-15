@@ -18,6 +18,7 @@ import random
 import threading
 import time
 from collections import deque
+from email.utils import parsedate_to_datetime
 from typing import Any, Optional
 
 import httpx
@@ -38,10 +39,12 @@ class Transport:
         self.debug = debug
         self._queue: deque[dict[str, Any]] = deque(maxlen=_MAX_QUEUE)
         self._lock = threading.Lock()
+        self._flush_lock = threading.Lock()
         self._wake = threading.Event()
         self._stopped = False
         self._draining = False
         self._dropped = 0
+        self._retry_at = 0.0
         self._client: Optional[httpx.Client] = None
         self._thread = threading.Thread(
             target=self._run, name="margined-flush", daemon=True
@@ -73,6 +76,12 @@ class Transport:
 
     def flush(self) -> None:
         """Drain the queue synchronously. Safe to call from any thread."""
+        with self._flush_lock:
+            self._flush()
+
+    def _flush(self) -> None:
+        if time.time() < self._retry_at:
+            return
         while True:
             with self._lock:
                 if not self._queue:
@@ -92,10 +101,19 @@ class Transport:
         for attempt in range(attempts):
             try:
                 resp = self._get_client().post(self.endpoint, json=payload)
-                if resp.status_code < 500:
-                    if self.debug and resp.status_code >= 400:
-                        logger.warning("margined: ingest rejected batch: %s", resp.status_code)
-                    return True  # 2xx accepted; 4xx will not improve on retry — drop
+                retryable = resp.status_code >= 500 or resp.status_code in (408, 429)
+                if not retryable:
+                    if not 200 <= resp.status_code < 300:
+                        with self._lock:
+                            self._dropped += len(batch)
+                        logger.warning("margined: ingest rejected %d events (%s); check the key and event fields",
+                                       len(batch), resp.status_code)
+                    return True
+                delay = _retry_delay(resp.headers.get("retry-after"))
+                if delay > 0:
+                    self._retry_at = time.time() + delay
+                    break  # bounded requeue, without blocking flush until reset
+
             except Exception:
                 if self.debug:
                     logger.warning("margined: flush attempt %d failed", attempt + 1, exc_info=True)
@@ -157,3 +175,13 @@ def _user_agent() -> str:
 
 def debug_enabled() -> bool:
     return os.environ.get("MARGINED_DEBUG", "").lower() in ("1", "true", "yes")
+
+
+def _retry_delay(value: Optional[str]) -> float:
+    if not isinstance(value, str) or not value:
+        return 0.0
+    try:
+        seconds = float(value) if value.isdigit() else parsedate_to_datetime(value).timestamp() - time.time()
+        return max(0.0, min(seconds, 32 * 86400))
+    except (ValueError, TypeError, OverflowError):
+        return 0.0

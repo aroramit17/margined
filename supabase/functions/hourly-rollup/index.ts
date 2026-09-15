@@ -10,6 +10,8 @@
  * accumulated totals with a partial window.)
  */
 
+import { withCronAuth } from "../_shared/cron-auth.ts";
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabase = createClient(
@@ -19,7 +21,7 @@ const supabase = createClient(
 
 const PAGE_SIZE = 1000;
 
-Deno.serve(async (_req) => {
+Deno.serve(withCronAuth(async (_req) => {
   try {
     // Recompute from the start of the previous UTC day.
     const windowStart = new Date();
@@ -104,4 +106,4 @@ Deno.serve(async (_req) => {
     console.error("Rollup failed:", err);
     return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
   }
-});
+}));
