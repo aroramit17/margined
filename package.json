@@ -1,0 +1,36 @@
+{
+  "name": "inferlytic",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "sdk:build": "tsc -p packages/sdk/tsconfig.json",
+    "format": "prettier --write app components lib packages/sdk/src tests next.config.ts",
+    "test:smoke": "tsx tests/http.smoke.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.57.0",
+    "lucide-react": "^0.468.0",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^3.0.0",
+    "stripe": "^18.0.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "prettier": "^3.9.6",
+    "supabase": "^2.117.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

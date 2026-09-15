@@ -1,0 +1,11 @@
+node_modules
+.next
+.env*
+!.env.example
+*.tsbuildinfo
+packages/sdk/dist
+playwright-report
+test-results
+/margined/
+.DS_Store
+supabase/.temp/
